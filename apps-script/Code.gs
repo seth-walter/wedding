@@ -19,6 +19,15 @@ const CONFIG = {
   rsvpSheetName: 'RSVPs',
   logSheetName: 'Lookup Log',
 
+  // Which row holds the column headers. 'auto' scans the first few rows and
+  // picks the one with the most recognizable headers, which handles sheets
+  // where row 1 is a merged group label like "RSVP | Hotel".
+  headerRow: 'auto',
+
+  // Let a guest with a plus one RSVP for them too. If the Plus One Name column
+  // is filled in, that name is shown; otherwise the guest can type it in.
+  plusOnes: true,
+
   // Plated-meal choices offered to each guest. Leave empty to hide the question.
   // e.g. ['Beef', 'Chicken', 'Vegetarian']
   mealOptions: [],
@@ -50,8 +59,10 @@ const COLUMN_ALIASES = {
   firstName: ['first name', 'first', 'firstname', 'given name', 'guest first name'],
   lastName: ['last name', 'last', 'lastname', 'surname', 'family name', 'guest last name'],
   fullName: ['full name', 'name', 'guest', 'guest name', 'invitee'],
-  household: ['household', 'household id', 'party', 'party id', 'group', 'family', 'invitation', 'invite', 'address'],
-  email: ['email', 'e-mail', 'email address'],
+  household: ['household', 'household id', 'party', 'party id', 'group', 'family', 'invitation', 'address'],
+  email: ['email', 'e mail', 'email address'],
+  plusOneName: ['plus one name', 'plus 1 name', 'guest of', 'plus one guest'],
+  plusOneAllowed: ['plus one', 'plus 1', 'plus one allowed', 'guest allowed'],
 };
 
 /* ------------------------------------------------------------------ *
@@ -103,8 +114,12 @@ function handleSearch(body) {
   const guests = readGuests();
   const target = first + ' ' + last;
 
+  // Unnamed plus ones have no name to match against, so they are never a
+  // search result — only ever a row inside the household that found them.
+  const searchable = guests.filter(function (g) { return !!g.normalized; });
+
   // Exact match on the normalized full name.
-  let matches = guests.filter(function (g) { return g.normalized === target; });
+  let matches = searchable.filter(function (g) { return g.normalized === target; });
 
   // Fall back to a small edit distance so common typos still find the guest.
   // The budget scales with name length: two edits out of "christopher anderson"
@@ -112,7 +127,7 @@ function handleSearch(body) {
   if (matches.length === 0) {
     const budget = target.length >= 12 ? 2 : (target.length >= 8 ? 1 : 0);
     if (budget > 0) {
-      matches = guests.filter(function (g) {
+      matches = searchable.filter(function (g) {
         return editDistance(g.normalized, target) <= budget;
       });
     }
@@ -148,6 +163,8 @@ function handleSearch(body) {
         return {
           id: g.id,
           name: g.displayName,
+          isPlusOne: !!g.isPlusOne,
+          needsName: !!g.needsName,
           previous: previous[g.id] || null,
         };
       }),
@@ -192,10 +209,16 @@ function handleSubmit(body) {
     const guest = validIds[String(r.id)];
     if (!guest) continue;
 
+    // An unnamed plus one is the one case where the guest supplies the name.
+    let name = guest.displayName;
+    if (guest.needsName && r.name) {
+      name = truncate(String(r.name).trim(), 80) + ' (guest of ' + guest.hostName + ')';
+    }
+
     rows.push([
       now,
       householdId,
-      guest.displayName,
+      name,
       r.attending ? 'Yes' : 'No',
       truncate(r.meal, 100),
       truncate(r.dietary, 500),
@@ -238,10 +261,11 @@ function readGuests() {
   const values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
 
-  const cols = mapColumns(values[0]);
+  const headerIndex = findHeaderRow(values);
+  const cols = mapColumns(values[headerIndex]);
   const guests = [];
 
-  for (let r = 1; r < values.length; r++) {
+  for (let r = headerIndex + 1; r < values.length; r++) {
     const row = values[r];
 
     let first = cols.firstName >= 0 ? String(row[cols.firstName] || '').trim() : '';
@@ -272,9 +296,69 @@ function readGuests() {
       normalized: normalize(first) + ' ' + normalize(last),
       household: household,
     });
+
+    // Plus ones live on the invited guest's row rather than getting their own,
+    // so give them a seat in the same household. A named plus one is shown by
+    // name; an unnamed but permitted one is filled in by the guest.
+    if (!CONFIG.plusOnes) continue;
+
+    const plusName = cols.plusOneName >= 0
+      ? String(row[cols.plusOneName] || '').trim()
+      : '';
+    const plusAllowed = cols.plusOneAllowed >= 0 && isYes(row[cols.plusOneAllowed]);
+
+    if (plusName) {
+      guests.push({
+        id: 'g' + (r + 1) + 'p',
+        displayName: plusName,
+        normalized: normalize(plusName),
+        household: household,
+        isPlusOne: true,
+        hostName: displayName,
+      });
+    } else if (plusAllowed) {
+      guests.push({
+        id: 'g' + (r + 1) + 'p',
+        displayName: 'Guest of ' + displayName,
+        normalized: '',           // unnamed: never matchable by search
+        household: household,
+        isPlusOne: true,
+        needsName: true,
+        hostName: displayName,
+      });
+    }
   }
 
   return guests;
+}
+
+/**
+ * Finds the header row. Sheets often reserve row 1 for merged group labels, so
+ * scan the first few rows and take whichever matches the most known headers.
+ */
+function findHeaderRow(values) {
+  if (CONFIG.headerRow !== 'auto') return Number(CONFIG.headerRow) - 1;
+
+  const limit = Math.min(5, values.length);
+  let best = 0;
+  let bestScore = -1;
+
+  for (let r = 0; r < limit; r++) {
+    const cols = mapColumns(values[r]);
+    let score = 0;
+    Object.keys(cols).forEach(function (k) { if (cols[k] >= 0) score++; });
+
+    // A header row is useless without a name column.
+    const hasName = cols.firstName >= 0 || cols.fullName >= 0;
+    if (hasName && score > bestScore) { bestScore = score; best = r; }
+  }
+
+  return best;
+}
+
+function isYes(v) {
+  const s = normalize(v);
+  return s === 'yes' || s === 'y' || s === 'true' || s === '1' || s === 'x';
 }
 
 function mapColumns(headerRow) {

@@ -113,6 +113,12 @@ function renderForm() {
 
     row.innerHTML = `
       <p class="rsvp-guest-name">${escapeHtml(m.name)}</p>
+      ${m.needsName
+        ? `<label class="rsvp-field rsvp-plusone-name">
+             <span>Your guest's name</span>
+             <input type="text" class="rsvp-name" maxlength="80" placeholder="Who are you bringing?">
+           </label>`
+        : ""}
       <div class="rsvp-choice">
         <label>
           <input type="radio" name="att-${m.id}" value="yes" ${yesChecked}>
@@ -181,6 +187,7 @@ function mealField(id, meals) {
 async function doSubmit() {
   const rows = [];
   let missing = false;
+  let needsGuestName = false;
 
   el.guests.querySelectorAll(".rsvp-guest").forEach((row) => {
     const id = row.dataset.guestId;
@@ -189,10 +196,17 @@ async function doSubmit() {
 
     const mealEl = row.querySelector(".rsvp-meal");
     const dietEl = row.querySelector(".rsvp-dietary");
+    const nameEl = row.querySelector(".rsvp-name");
+
+    // A plus one who is coming needs a name; one who is declining does not.
+    if (nameEl && picked.value === "yes" && !nameEl.value.trim()) {
+      needsGuestName = true;
+    }
 
     rows.push({
       id,
       attending: picked.value === "yes",
+      name: nameEl ? nameEl.value.trim() : "",
       meal: mealEl ? mealEl.value : "",
       dietary: dietEl ? dietEl.value.trim() : "",
     });
@@ -200,6 +214,11 @@ async function doSubmit() {
 
   if (missing) {
     showError("Please choose a response for everyone in your party.");
+    return;
+  }
+
+  if (needsGuestName) {
+    showError("Please tell us the name of the guest you're bringing.");
     return;
   }
 

@@ -17,16 +17,22 @@ const SRC = path.join(__dirname, "Code.gs");
 
 // ---- Fake spreadsheet ----------------------------------------------------
 
+// Mirrors the real guest sheet: row 1 is a merged group label, row 2 is the
+// actual header, households are grouped by Address, plus ones are a column.
 const guestRows = [
-  ["First Name", "Last Name", "Household", "Address"],
-  ["Anna", "Reed", "Reed Family", "12 Oak St"],
-  ["David", "Reed", "Reed Family", "12 Oak St"],
-  ["Priya", "Nair", "Nair", "9 Elm Ave"],
-  ["José", "García", "Garcia", "4 Pine Rd"],
-  ["Mary-Kate", "O'Brien", "OBrien", "77 Ash Ln"],
-  ["Jo", "Ng", "Ng", "3 Bay St"],
-  ["Bo", "Ng", "Ng Two", "5 Bay St"],
-  ["Christopher", "Anderson", "Anderson", "8 Cedar Ct"],
+  ["", "", "", "", "", "", "", "", "", "", "RSVP", "Hotel", "", "", "", "", ""],
+  ["Count", "First Name", "Last Name", "Address", "Email", "Phone",
+   "Dietary Needs", "Bride, Groom, Both", "Save the Date Sent", "Invite Sent",
+   "RSVP", "Hotel Yes", "Hotel No", "Meal Choice", "Table Assignment",
+   "Plus One Name", "Plus One"],
+  [1, "Anna", "Reed", "12 Oak St", "anna@example.com", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [2, "David", "Reed", "12 Oak St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [3, "Priya", "Nair", "9 Elm Ave", "", "", "", "Bride", "Y", "Y", "", "", "", "", "", "Rahul Nair", ""],
+  [4, "José", "García", "4 Pine Rd", "", "", "", "Groom", "Y", "Y", "", "", "", "", "", "", "Yes"],
+  [5, "Mary-Kate", "O'Brien", "77 Ash Ln", "", "", "", "Bride", "Y", "Y", "", "", "", "", "", "", ""],
+  [6, "Jo", "Ng", "3 Bay St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [7, "Bo", "Ng", "5 Bay St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [8, "Christopher", "Anderson", "8 Cedar Ct", "", "", "", "Groom", "Y", "Y", "", "", "", "", "", "", ""],
 ];
 
 const sheets = {};
@@ -91,10 +97,23 @@ function check(label, actual, expected) {
   ok ? pass++ : fail++;
 }
 
-console.log("\n--- readGuests ---");
+console.log("\n--- header detection & readGuests ---");
+check("finds header on row 2, not row 1", findHeaderRow(guestRows), 1);
 const guests = readGuests();
-check("loads all 8 guests", guests.length, 8);
-check("groups Reed household", guests.filter(g => g.household === "Reed Family").length, 2);
+check("loads 8 invited + 2 plus ones", guests.length, 10);
+check("groups Reeds by shared address", guests.filter(g => g.household === "12 Oak St").length, 2);
+
+console.log("\n--- plus ones ---");
+const namedPlus = guests.find(g => g.displayName === "Rahul Nair");
+check("named plus one becomes a household member", !!namedPlus, true);
+check("named plus one shares Priya's household", namedPlus.household, "9 Elm Ave");
+const unnamedPlus = guests.find(g => g.needsName);
+check("permitted-but-unnamed plus one is created", unnamedPlus.displayName, "Guest of José García");
+check("unnamed plus one is not searchable", unnamedPlus.normalized, "");
+check("guest with no plus one gets none",
+  guests.filter(g => g.household === "12 Oak St" && g.isPlusOne).length, 0);
+check("named plus one IS searchable by their own name",
+  handleSearch({ firstName: "Rahul", lastName: "Nair" }).ok, true);
 check("normalizes accents", guests.find(g => g.displayName === "José García").normalized, "jose garcia");
 check("strips apostrophe/hyphen", guests.find(g => g.displayName.includes("O'Brien")).normalized, "marykate obrien");
 
@@ -118,9 +137,11 @@ console.log("\n--- fuzzy matching does not leak across people ---");
 check("short name needs exact spelling (Bo != Jo)",
   handleSearch({ firstName: "Zo", lastName: "Ng" }).error, "not_found");
 check("Jo Ng resolves to own household",
-  handleSearch({ firstName: "Jo", lastName: "Ng" }).household.id, "Ng");
+  handleSearch({ firstName: "Jo", lastName: "Ng" }).household.id, "3 Bay St");
 check("Bo Ng resolves to own household",
-  handleSearch({ firstName: "Bo", lastName: "Ng" }).household.id, "Ng Two");
+  handleSearch({ firstName: "Bo", lastName: "Ng" }).household.id, "5 Bay St");
+check("Jo Ng sees only herself, not Bo",
+  handleSearch({ firstName: "Jo", lastName: "Ng" }).household.members.length, 1);
 
 console.log("\n--- search: rejections ---");
 check("first name only", handleSearch({ firstName: "Anna", lastName: "" }).error, "need_full_name");
@@ -135,7 +156,7 @@ const david = guests.find(g => g.displayName === "David Reed");
 const priya = guests.find(g => g.displayName === "Priya Nair");
 
 r = handleSubmit({
-  householdId: "Reed Family",
+  householdId: "12 Oak St",
   responses: [
     { id: anna.id, attending: true, meal: "", dietary: "No shellfish" },
     { id: david.id, attending: false },
@@ -148,18 +169,32 @@ check("counts attending", r.attending, 1);
 check("counts total", r.total, 2);
 check("wrote 2 rows", sheets["RSVPs"].rows.length, 3); // header + 2
 
-console.log("\n--- submit: forged requests ---");
+console.log("\n--- submit: plus one names ---");
 r = handleSubmit({
-  householdId: "Reed Family",
+  householdId: "4 Pine Rd",
+  responses: [
+    { id: guests.find(g => g.displayName === "José García").id, attending: true },
+    { id: unnamedPlus.id, attending: true, name: "Sofia Ruiz" },
+  ],
+});
+check("accepts a named-at-RSVP plus one", r.ok, true);
+check("records the supplied plus one name",
+  sheets["RSVPs"].rows[sheets["RSVPs"].rows.length - 1][2],
+  "Sofia Ruiz (guest of José García)");
+
+console.log("\n--- submit: forged requests ---");
+const rowsBefore = sheets["RSVPs"].rows.length;
+r = handleSubmit({
+  householdId: "12 Oak St",
   responses: [{ id: priya.id, attending: true }], // Priya is NOT in this household
 });
 check("rejects guest from another household", r.error, "bad_request");
-check("no rows written for forged guest", sheets["RSVPs"].rows.length, 3);
+check("no rows written for forged guest", sheets["RSVPs"].rows.length, rowsBefore);
 
 r = handleSubmit({ householdId: "Made Up Family", responses: [{ id: anna.id, attending: true }] });
 check("rejects unknown household", r.error, "not_found");
 
-r = handleSubmit({ householdId: "Reed Family", responses: [] });
+r = handleSubmit({ householdId: "12 Oak St", responses: [] });
 check("rejects empty responses", r.error, "bad_request");
 
 console.log("\n--- resubmission ---");

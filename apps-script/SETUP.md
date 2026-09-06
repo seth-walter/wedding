@@ -3,13 +3,29 @@
 The website is static, so the guest list lives in your Google Sheet instead of in
 this (public) repo. Nobody can read your guest list from the website's source.
 
+## 0. First: lock down sharing on the spreadsheet
+
+Open the sheet → **Share** → under *General access* set it to
+**Restricted**, so only people you name can open it.
+
+If it says "Anyone with the link", your guest list — names, addresses, emails,
+phone numbers — is readable by anyone who has or guesses the URL. The RSVP
+system does **not** need link sharing: the Apps Script runs as you and reads the
+sheet with your own account's access.
+
 ## 1. Prepare the spreadsheet
 
 Open your existing guest-list sheet. Two things matter:
 
 **Tab name.** The tab holding guests must be called `Guests`. If yours is called
 something else, either rename the tab or change `guestSheetName` at the top of
-`Code.gs`.
+`Code.gs`. **← You almost certainly need to do this.**
+
+**Header row.** Your sheet keeps merged group labels ("RSVP", "Hotel") on row 1
+and the real headers on row 2. `headerRow: 'auto'` handles that by scanning the
+first five rows for the one with the most recognizable headers, so you don't
+need to change anything — but if you ever restructure the top of the sheet,
+you can pin it explicitly (`headerRow: 2`).
 
 **Columns.** These headers are recognized automatically (case and punctuation
 don't matter):
@@ -24,21 +40,33 @@ don't matter):
 If your headers differ, add yours to the front of the matching list in
 `COLUMN_ALIASES` in `Code.gs`.
 
-**About the Household column.** This is what groups people onto one invitation.
-Put the same value in it for everyone invited together — the household name,
-an address, anything consistent:
+**About grouping people onto one invitation.** Your sheet has no `Household`
+column, so the script falls back to `Address` — everyone sharing an address
+RSVPs together. When Anna looks herself up, she'll answer for David too.
 
-| First Name | Last Name | Household |
-|---|---|---|
-| Anna | Reed | Reed Family |
-| David | Reed | Reed Family |
-| Priya | Nair | Nair |
+⚠️ **This makes address spelling matter.** "12 Oak St" and "12 Oak Street" are
+two different households to the script, so a couple entered inconsistently would
+be split and have to RSVP separately. Two options:
 
-When Anna looks herself up, she'll RSVP for David too. Without this column each
-person RSVPs individually, which still works — it's just more steps for couples.
+- Sort by Address and skim for near-duplicates, or
+- Add a `Household` column and put the same short label on everyone invited
+  together. It takes priority over Address and is immune to typos.
 
-The script only ever reads these columns. Any other columns you keep (address,
-phone, notes) are ignored and stay private.
+Also worth knowing: guests at *different* addresses are never grouped, and a
+blank address makes that person their own household. Neither breaks anything —
+they just RSVP individually.
+
+**Plus ones** are read from your existing columns:
+
+- `Plus One Name` filled in → that person appears by name in the party, and can
+  also look themselves up.
+- `Plus One` set to Yes (or Y/X/True) with no name → the party shows "Guest of
+  Anna Reed" and Anna types their name when she RSVPs.
+- Both blank → no plus one offered.
+
+The script only ever reads the name, address, and plus-one columns. Everything
+else you keep — phone, notes, table assignments, who's a bridesmaid — is ignored
+and never leaves the sheet.
 
 ## 2. Add the script
 
