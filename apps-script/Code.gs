@@ -28,8 +28,10 @@ const CONFIG = {
   // is filled in, that name is shown; otherwise the guest can type it in.
   plusOnes: true,
 
-  // Plated-meal choices offered to each guest. Leave empty to hide the question.
-  // e.g. ['Beef', 'Chicken', 'Vegetarian']
+  // Plated-meal choices offered to each guest. Leave empty to hide the question
+  // entirely — currently empty because catering is likely a food truck, where
+  // guests choose on the day. If that changes, list the options here, e.g.
+  // ['Beef', 'Chicken', 'Vegetarian'], and redeploy.
   mealOptions: [],
 
   // Ask each guest for dietary restrictions.
@@ -59,7 +61,8 @@ const COLUMN_ALIASES = {
   firstName: ['first name', 'first', 'firstname', 'given name', 'guest first name'],
   lastName: ['last name', 'last', 'lastname', 'surname', 'family name', 'guest last name'],
   fullName: ['full name', 'name', 'guest', 'guest name', 'invitee'],
-  household: ['household', 'household id', 'party', 'party id', 'group', 'family', 'invitation', 'address'],
+  household: ['household', 'household id', 'party', 'party id', 'group', 'family', 'invitation'],
+  address: ['address', 'mailing address', 'street address', 'home address'],
   email: ['email', 'e mail', 'email address'],
   plusOneName: ['plus one name', 'plus 1 name', 'guest of', 'plus one guest'],
   plusOneAllowed: ['plus one', 'plus 1', 'plus one allowed', 'guest allowed'],
@@ -284,11 +287,13 @@ function readGuests() {
 
     const displayName = first + ' ' + last;
 
-    // Without a household column each row stands alone, which still works —
-    // partners just RSVP one at a time. Adding the column groups them.
-    const household = cols.household >= 0 && String(row[cols.household] || '').trim()
-      ? String(row[cols.household]).trim()
-      : 'row-' + (r + 1);
+    // Household first, then a shared address, then the guest alone. Checked per
+    // row rather than per column, so a blank Household cell still groups a
+    // couple by their address instead of splitting them onto separate replies.
+    const household = firstNonEmpty([
+      cols.household >= 0 ? row[cols.household] : '',
+      cols.address >= 0 ? row[cols.address] : '',
+    ]) || 'row-' + (r + 1);
 
     guests.push({
       id: 'g' + (r + 1),
@@ -354,6 +359,14 @@ function findHeaderRow(values) {
   }
 
   return best;
+}
+
+function firstNonEmpty(candidates) {
+  for (let i = 0; i < candidates.length; i++) {
+    const v = String(candidates[i] == null ? '' : candidates[i]).trim();
+    if (v) return v;
+  }
+  return '';
 }
 
 function isYes(v) {
@@ -482,17 +495,44 @@ function editDistance(a, b) {
 
 function testGuestList() {
   const guests = readGuests();
-  Logger.log('Loaded %s guests.', guests.length);
-
-  const households = {};
-  guests.forEach(function (g) { households[g.household] = (households[g.household] || 0) + 1; });
-  Logger.log('Across %s households.', Object.keys(households).length);
-
-  guests.slice(0, 5).forEach(function (g) {
-    Logger.log('  %s  (household: %s)', g.displayName, g.household);
-  });
 
   if (guests.length === 0) {
     Logger.log('No guests found — check the tab name and that you have First/Last Name columns.');
+    return;
   }
+
+  const households = {};
+  guests.forEach(function (g) {
+    if (!households[g.household]) households[g.household] = [];
+    households[g.household].push(g);
+  });
+
+  const plusOnes = guests.filter(function (g) { return g.isPlusOne; });
+
+  Logger.log('%s people across %s households (%s invited guests + %s plus ones).',
+    guests.length, Object.keys(households).length,
+    guests.length - plusOnes.length, plusOnes.length);
+
+  // Anyone whose household fell through to the row-number fallback has neither
+  // a Household nor an Address, so they will RSVP alone. Usually that is right
+  // for a single guest and wrong for half of a couple — worth eyeballing.
+  const ungrouped = guests.filter(function (g) {
+    return !g.isPlusOne && g.household.indexOf('row-') === 0;
+  });
+
+  if (ungrouped.length) {
+    Logger.log('');
+    Logger.log('%s guests have no Household or Address, so each will RSVP alone.',
+      ungrouped.length);
+    Logger.log('Fine for solo guests; fill in Household for anyone invited with someone else:');
+    ungrouped.forEach(function (g) { Logger.log('   - %s', g.displayName); });
+  }
+
+  Logger.log('');
+  Logger.log('Sample of how parties will appear when someone looks themselves up:');
+  Object.keys(households).slice(0, 6).forEach(function (h) {
+    Logger.log('   [%s] %s', h, households[h].map(function (g) {
+      return g.displayName + (g.needsName ? ' (unnamed)' : '');
+    }).join(', '));
+  });
 }

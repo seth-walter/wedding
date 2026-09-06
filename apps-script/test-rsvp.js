@@ -21,18 +21,24 @@ const SRC = path.join(__dirname, "Code.gs");
 // actual header, households are grouped by Address, plus ones are a column.
 const guestRows = [
   ["", "", "", "", "", "", "", "", "", "", "RSVP", "Hotel", "", "", "", "", ""],
-  ["Count", "First Name", "Last Name", "Address", "Email", "Phone",
+  ["Count", "First Name", "Last Name", "Household", "Address", "Email", "Phone",
    "Dietary Needs", "Bride, Groom, Both", "Save the Date Sent", "Invite Sent",
    "RSVP", "Hotel Yes", "Hotel No", "Meal Choice", "Table Assignment",
    "Plus One Name", "Plus One"],
-  [1, "Anna", "Reed", "12 Oak St", "anna@example.com", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
-  [2, "David", "Reed", "12 Oak St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
-  [3, "Priya", "Nair", "9 Elm Ave", "", "", "", "Bride", "Y", "Y", "", "", "", "", "", "Rahul Nair", ""],
-  [4, "José", "García", "4 Pine Rd", "", "", "", "Groom", "Y", "Y", "", "", "", "", "", "", "Yes"],
-  [5, "Mary-Kate", "O'Brien", "77 Ash Ln", "", "", "", "Bride", "Y", "Y", "", "", "", "", "", "", ""],
-  [6, "Jo", "Ng", "3 Bay St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
-  [7, "Bo", "Ng", "5 Bay St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
-  [8, "Christopher", "Anderson", "8 Cedar Ct", "", "", "", "Groom", "Y", "Y", "", "", "", "", "", "", ""],
+  // Household filled in — the intended path.
+  [1, "Anna", "Reed", "Reed", "12 Oak St", "anna@example.com", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [2, "David", "Reed", "Reed", "12 Oak St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  // Household blank, address shared — must still group as one party.
+  [3, "Tom", "Hale", "", "5 Vine Way", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [4, "Ida", "Hale", "", "5 Vine Way", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  // Household and address both blank — RSVPs alone.
+  [5, "Lena", "Frost", "", "", "", "", "", "Bride", "Y", "Y", "", "", "", "", "", "", ""],
+  [6, "Priya", "Nair", "Nair", "9 Elm Ave", "", "", "", "Bride", "Y", "Y", "", "", "", "", "", "Rahul Nair", ""],
+  [7, "José", "García", "Garcia", "4 Pine Rd", "", "", "", "Groom", "Y", "Y", "", "", "", "", "", "", "Yes"],
+  [8, "Mary-Kate", "O'Brien", "OBrien", "77 Ash Ln", "", "", "", "Bride", "Y", "Y", "", "", "", "", "", "", ""],
+  [9, "Jo", "Ng", "Ng A", "3 Bay St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [10, "Bo", "Ng", "Ng B", "5 Bay St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [11, "Christopher", "Anderson", "Anderson", "8 Cedar Ct", "", "", "", "Groom", "Y", "Y", "", "", "", "", "", "", ""],
 ];
 
 const sheets = {};
@@ -100,13 +106,26 @@ function check(label, actual, expected) {
 console.log("\n--- header detection & readGuests ---");
 check("finds header on row 2, not row 1", findHeaderRow(guestRows), 1);
 const guests = readGuests();
-check("loads 8 invited + 2 plus ones", guests.length, 10);
-check("groups Reeds by shared address", guests.filter(g => g.household === "12 Oak St").length, 2);
+check("loads 11 invited + 2 plus ones", guests.length, 13);
+
+console.log("\n--- household grouping: Household -> Address -> alone ---");
+check("Household column wins when present",
+  guests.filter(g => g.household === "Reed").length, 2);
+check("Household ignored in favour of nothing else when set",
+  guests.find(g => g.displayName === "Anna Reed").household, "Reed");
+check("blank Household falls back to shared Address",
+  guests.filter(g => g.household === "5 Vine Way").length, 2);
+check("Hales are grouped despite empty Household",
+  handleSearch({ firstName: "Tom", lastName: "Hale" }).household.members.length, 2);
+check("both blank -> guest RSVPs alone",
+  handleSearch({ firstName: "Lena", lastName: "Frost" }).household.members.length, 1);
+check("solo guest household is the row fallback",
+  guests.find(g => g.displayName === "Lena Frost").household.startsWith("row-"), true);
 
 console.log("\n--- plus ones ---");
 const namedPlus = guests.find(g => g.displayName === "Rahul Nair");
 check("named plus one becomes a household member", !!namedPlus, true);
-check("named plus one shares Priya's household", namedPlus.household, "9 Elm Ave");
+check("named plus one shares Priya's household", namedPlus.household, "Nair");
 const unnamedPlus = guests.find(g => g.needsName);
 check("permitted-but-unnamed plus one is created", unnamedPlus.displayName, "Guest of José García");
 check("unnamed plus one is not searchable", unnamedPlus.normalized, "");
@@ -137,9 +156,9 @@ console.log("\n--- fuzzy matching does not leak across people ---");
 check("short name needs exact spelling (Bo != Jo)",
   handleSearch({ firstName: "Zo", lastName: "Ng" }).error, "not_found");
 check("Jo Ng resolves to own household",
-  handleSearch({ firstName: "Jo", lastName: "Ng" }).household.id, "3 Bay St");
+  handleSearch({ firstName: "Jo", lastName: "Ng" }).household.id, "Ng A");
 check("Bo Ng resolves to own household",
-  handleSearch({ firstName: "Bo", lastName: "Ng" }).household.id, "5 Bay St");
+  handleSearch({ firstName: "Bo", lastName: "Ng" }).household.id, "Ng B");
 check("Jo Ng sees only herself, not Bo",
   handleSearch({ firstName: "Jo", lastName: "Ng" }).household.members.length, 1);
 
@@ -156,7 +175,7 @@ const david = guests.find(g => g.displayName === "David Reed");
 const priya = guests.find(g => g.displayName === "Priya Nair");
 
 r = handleSubmit({
-  householdId: "12 Oak St",
+  householdId: "Reed",
   responses: [
     { id: anna.id, attending: true, meal: "", dietary: "No shellfish" },
     { id: david.id, attending: false },
@@ -171,7 +190,7 @@ check("wrote 2 rows", sheets["RSVPs"].rows.length, 3); // header + 2
 
 console.log("\n--- submit: plus one names ---");
 r = handleSubmit({
-  householdId: "4 Pine Rd",
+  householdId: "Garcia",
   responses: [
     { id: guests.find(g => g.displayName === "José García").id, attending: true },
     { id: unnamedPlus.id, attending: true, name: "Sofia Ruiz" },
@@ -185,7 +204,7 @@ check("records the supplied plus one name",
 console.log("\n--- submit: forged requests ---");
 const rowsBefore = sheets["RSVPs"].rows.length;
 r = handleSubmit({
-  householdId: "12 Oak St",
+  householdId: "Reed",
   responses: [{ id: priya.id, attending: true }], // Priya is NOT in this household
 });
 check("rejects guest from another household", r.error, "bad_request");
@@ -194,7 +213,7 @@ check("no rows written for forged guest", sheets["RSVPs"].rows.length, rowsBefor
 r = handleSubmit({ householdId: "Made Up Family", responses: [{ id: anna.id, attending: true }] });
 check("rejects unknown household", r.error, "not_found");
 
-r = handleSubmit({ householdId: "12 Oak St", responses: [] });
+r = handleSubmit({ householdId: "Reed", responses: [] });
 check("rejects empty responses", r.error, "bad_request");
 
 console.log("\n--- resubmission ---");

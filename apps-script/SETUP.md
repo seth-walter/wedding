@@ -40,21 +40,25 @@ don't matter):
 If your headers differ, add yours to the front of the matching list in
 `COLUMN_ALIASES` in `Code.gs`.
 
-**About grouping people onto one invitation.** Your sheet has no `Household`
-column, so the script falls back to `Address` — everyone sharing an address
-RSVPs together. When Anna looks herself up, she'll answer for David too.
+**About grouping people onto one invitation.** For each guest the script tries
+three things in order:
 
-⚠️ **This makes address spelling matter.** "12 Oak St" and "12 Oak Street" are
-two different households to the script, so a couple entered inconsistently would
-be split and have to RSVP separately. Two options:
+1. **`Household`** — everyone sharing a value RSVPs together. This is the one to
+   use: it's immune to address typos and reads clearly.
+2. **`Address`** — used only when `Household` is blank for that row.
+3. **Neither** — that guest RSVPs alone.
 
-- Sort by Address and skim for near-duplicates, or
-- Add a `Household` column and put the same short label on everyone invited
-  together. It takes priority over Address and is immune to typos.
+So when Anna Reed looks herself up, she answers for David too, and one reply
+covers the household.
 
-Also worth knowing: guests at *different* addresses are never grouped, and a
-blank address makes that person their own household. Neither breaks anything —
-they just RSVP individually.
+⚠️ **Your `Household` column is only partly filled in.** Anyone left blank falls
+through to `Address`, and anyone blank in both RSVPs alone. That's correct for
+genuinely solo guests and wrong for half of a couple. Run `testGuestList`
+(below) — it prints exactly who is currently set to RSVP alone, so you can scan
+that list and fill in the ones that need it.
+
+If you rely on `Address` for some rows, spelling matters there: "12 Oak St" and
+"12 Oak Street" are two different households. `Household` avoids that entirely.
 
 **Plus ones** are read from your existing columns:
 
@@ -80,9 +84,15 @@ Now test it before deploying: in the toolbar function dropdown pick
 (it's your own script reading your own sheet — choose your account, then
 *Advanced → Go to project → Allow*).
 
-Open **Execution log**. You should see your guest count and a few sample names.
+Open **Execution log**. You should see:
+
+- how many people and households were loaded, and how many are plus ones;
+- **a list of every guest currently set to RSVP alone** — scan this and fill in
+  `Household` for anyone who should be grouped with someone else;
+- a sample of how parties will look when a guest finds themselves.
+
 If it says 0 guests, the tab name or the column headers don't match — fix and
-re-run.
+re-run. Re-run it any time you edit the guest list; no redeploy needed.
 
 ## 3. Deploy it as a web app
 
