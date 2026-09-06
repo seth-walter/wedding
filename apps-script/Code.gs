@@ -62,7 +62,6 @@ const COLUMN_ALIASES = {
   lastName: ['last name', 'last', 'lastname', 'surname', 'family name', 'guest last name'],
   fullName: ['full name', 'name', 'guest', 'guest name', 'invitee'],
   household: ['household', 'household id', 'party', 'party id', 'group', 'family', 'invitation'],
-  address: ['address', 'mailing address', 'street address', 'home address'],
   email: ['email', 'e mail', 'email address'],
   plusOneName: ['plus one name', 'plus 1 name', 'guest of', 'plus one guest'],
   plusOneAllowed: ['plus one', 'plus 1', 'plus one allowed', 'guest allowed'],
@@ -287,13 +286,10 @@ function readGuests() {
 
     const displayName = first + ' ' + last;
 
-    // Household first, then a shared address, then the guest alone. Checked per
-    // row rather than per column, so a blank Household cell still groups a
-    // couple by their address instead of splitting them onto separate replies.
-    const household = firstNonEmpty([
-      cols.household >= 0 ? row[cols.household] : '',
-      cols.address >= 0 ? row[cols.address] : '',
-    ]) || 'row-' + (r + 1);
+    // Household is the only thing that groups people onto one reply. A guest
+    // with no Household value simply RSVPs under their own name.
+    const household = (cols.household >= 0 ? String(row[cols.household] || '').trim() : '')
+      || 'row-' + (r + 1);
 
     guests.push({
       id: 'g' + (r + 1),
@@ -359,14 +355,6 @@ function findHeaderRow(values) {
   }
 
   return best;
-}
-
-function firstNonEmpty(candidates) {
-  for (let i = 0; i < candidates.length; i++) {
-    const v = String(candidates[i] == null ? '' : candidates[i]).trim();
-    if (v) return v;
-  }
-  return '';
 }
 
 function isYes(v) {
@@ -513,18 +501,17 @@ function testGuestList() {
     guests.length, Object.keys(households).length,
     guests.length - plusOnes.length, plusOnes.length);
 
-  // Anyone whose household fell through to the row-number fallback has neither
-  // a Household nor an Address, so they will RSVP alone. Usually that is right
-  // for a single guest and wrong for half of a couple — worth eyeballing.
+  // Anyone whose household fell through to the row-number fallback has no
+  // Household value, so they will RSVP alone. Usually that is right for a
+  // single guest and wrong for half of a couple — worth eyeballing.
   const ungrouped = guests.filter(function (g) {
     return !g.isPlusOne && g.household.indexOf('row-') === 0;
   });
 
   if (ungrouped.length) {
     Logger.log('');
-    Logger.log('%s guests have no Household or Address, so each will RSVP alone.',
-      ungrouped.length);
-    Logger.log('Fine for solo guests; fill in Household for anyone invited with someone else:');
+    Logger.log('%s guests have no Household value, so each will RSVP alone:', ungrouped.length);
+    Logger.log('(Fine for solo guests. Fill in Household for anyone invited with someone else.)');
     ungrouped.forEach(function (g) { Logger.log('   - %s', g.displayName); });
   }
 

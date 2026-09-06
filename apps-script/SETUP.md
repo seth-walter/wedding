@@ -36,29 +36,32 @@ don't matter):
 | Last name | `Last Name`, `Last`, `Surname` |
 | Full name (alternative) | `Name`, `Full Name`, `Guest` |
 | Household | `Household`, `Party`, `Group`, `Family`, `Invitation` |
+| Plus one name | `Plus One Name`, `Plus 1 Name`, `Guest Of` |
+| Plus one allowed | `Plus One`, `Plus 1`, `Guest Allowed` |
 
 If your headers differ, add yours to the front of the matching list in
 `COLUMN_ALIASES` in `Code.gs`.
 
-**About grouping people onto one invitation.** For each guest the script tries
-three things in order:
+**About grouping people onto one invitation.** One rule: guests sharing a
+`Household` value reply together, and a guest with a blank `Household` replies
+for themselves alone. Nothing else groups people — `Address` is deliberately
+ignored, so a shared address never merges two guests behind one reply.
 
-1. **`Household`** — everyone sharing a value RSVPs together. This is the one to
-   use: it's immune to address typos and reads clearly.
-2. **`Address`** — used only when `Household` is blank for that row.
-3. **Neither** — that guest RSVPs alone.
+| First Name | Last Name | Household | Result |
+|---|---|---|---|
+| Anna | Reed | `Reed` | Anna's reply covers David too |
+| David | Reed | `Reed` | |
+| Lena | Frost | *(blank)* | Lena replies for herself |
 
-So when Anna Reed looks herself up, she answers for David too, and one reply
-covers the household.
+⚠️ **Your `Household` column is only partly filled in** — roughly 32 of 76
+guests when I last looked. Everyone else will RSVP individually. That's correct
+for solo guests and wrong for half of a couple, who'd each have to find
+themselves separately.
 
-⚠️ **Your `Household` column is only partly filled in.** Anyone left blank falls
-through to `Address`, and anyone blank in both RSVPs alone. That's correct for
-genuinely solo guests and wrong for half of a couple. Run `testGuestList`
-(below) — it prints exactly who is currently set to RSVP alone, so you can scan
-that list and fill in the ones that need it.
-
-If you rely on `Address` for some rows, spelling matters there: "12 Oak St" and
-"12 Oak Street" are two different households. `Household` avoids that entirely.
+Run `testGuestList` (below): it prints exactly who is currently set to RSVP
+alone. Scan that list and fill in `Household` for anyone invited alongside
+someone else. Any consistent label works — `Reed`, `Reed Family`, `smith-04` —
+it only has to match between the people you want grouped.
 
 **Plus ones** are read from your existing columns:
 

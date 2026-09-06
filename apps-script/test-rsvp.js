@@ -108,19 +108,26 @@ check("finds header on row 2, not row 1", findHeaderRow(guestRows), 1);
 const guests = readGuests();
 check("loads 11 invited + 2 plus ones", guests.length, 13);
 
-console.log("\n--- household grouping: Household -> Address -> alone ---");
-check("Household column wins when present",
+console.log("\n--- household grouping: Household only, else alone ---");
+check("Household groups people onto one reply",
   guests.filter(g => g.household === "Reed").length, 2);
-check("Household ignored in favour of nothing else when set",
+check("Anna's household is her Household value",
   guests.find(g => g.displayName === "Anna Reed").household, "Reed");
-check("blank Household falls back to shared Address",
-  guests.filter(g => g.household === "5 Vine Way").length, 2);
-check("Hales are grouped despite empty Household",
-  handleSearch({ firstName: "Tom", lastName: "Hale" }).household.members.length, 2);
-check("both blank -> guest RSVPs alone",
+check("Anna's reply covers David too",
+  handleSearch({ firstName: "Anna", lastName: "Reed" }).household.members.length, 2);
+
+// The Hales share an address but have no Household value. Address must NOT
+// group them — a blank Household means the guest answers for themselves only.
+check("shared Address does NOT group without Household",
+  handleSearch({ firstName: "Tom", lastName: "Hale" }).household.members.length, 1);
+check("Tom Hale sees only himself",
+  handleSearch({ firstName: "Tom", lastName: "Hale" }).household.members[0].name, "Tom Hale");
+check("Ida Hale RSVPs separately",
+  handleSearch({ firstName: "Ida", lastName: "Hale" }).household.members.length, 1);
+check("no Household -> row fallback",
+  guests.find(g => g.displayName === "Tom Hale").household.startsWith("row-"), true);
+check("guest with neither field also RSVPs alone",
   handleSearch({ firstName: "Lena", lastName: "Frost" }).household.members.length, 1);
-check("solo guest household is the row fallback",
-  guests.find(g => g.displayName === "Lena Frost").household.startsWith("row-"), true);
 
 console.log("\n--- plus ones ---");
 const namedPlus = guests.find(g => g.displayName === "Rahul Nair");
