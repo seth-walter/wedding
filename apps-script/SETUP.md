@@ -192,9 +192,33 @@ At the top of `Code.gs`:
 - `maxSearchesPerMinute` — throttle for all visitors combined. 20 is generous
   for a wedding and low enough to frustrate scripted guessing.
 
-**After any change to `Code.gs`, you must redeploy:** Deploy → Manage
-deployments → pencil icon → Version: New version → Deploy. The URL stays the
-same. Editing the sheet's guest list needs no redeploy.
+## Redeploying after a change to `Code.gs`
+
+Editing the guest list needs no redeploy. Editing `Code.gs` always does.
+
+⚠️ **Do not use "New deployment".** It mints a brand-new URL and leaves the
+website pointing at the old code, which keeps running and looks fine — the
+site just silently talks to a stale version. Use this instead:
+
+1. Paste the new `Code.gs` into the editor and **press Ctrl+S to save**.
+   Deploying does not save your edits. Skipping this deploys the old code and
+   looks exactly like the deploy failing.
+2. **Deploy** (blue button, top right) → **Manage deployments**.
+3. Click the **pencil / edit icon** at the top right of the panel.
+4. Open the **Version** dropdown and pick **New version**.
+5. **Deploy**. The URL is unchanged.
+
+**Confirm it worked** by opening the Web app URL in a browser. It returns the
+deployed version:
+
+```json
+{"ok":true,"service":"rsvp","version":"2026-09-06.5","features":[...]}
+```
+
+If that version doesn't match `VERSION` at the top of `Code.gs`, the deploy
+didn't take — almost always an unsaved editor. This check is the fastest way to
+tell a genuine bug from a stale deployment, so do it before debugging anything
+else.
 
 If you change the matching logic, you can sanity-check it against a fake guest
 list without touching your real sheet:
