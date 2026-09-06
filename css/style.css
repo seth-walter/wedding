@@ -743,6 +743,45 @@ a { color: var(--accent-dk); }
   margin-bottom: 0.4rem;
 }
 
+/* Only rendered with ?debug=1 */
+
+.rsvp-debug {
+  margin-top: 2.5rem;
+  padding: 1rem 1.2rem;
+  border: 1px dashed var(--terra);
+  border-radius: 8px;
+  background: var(--card);
+  text-align: left;
+}
+
+.rsvp-debug p { margin: 0 0 0.7rem; font-size: 0.9rem; }
+
+.rsvp-debug button {
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.5rem 1.1rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--accent-dk);
+  cursor: pointer;
+}
+
+.rsvp-debug pre {
+  margin: 0.9rem 0 0;
+  padding: 0.8rem;
+  background: var(--bg-alt);
+  border-radius: 6px;
+  font-size: 0.76rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 22rem;
+  overflow: auto;
+}
+
 .rsvp-unconfigured {
   text-align: center;
   font-style: italic;

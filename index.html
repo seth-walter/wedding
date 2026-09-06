@@ -9,7 +9,10 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Proza+Libre:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+  <!-- ?v= is bumped on release so browsers cannot serve a stale copy. GitHub
+       Pages sends cache-control: max-age=600, which otherwise hides a fix for
+       ten minutes and makes changes look like they did not deploy. -->
+  <link rel="stylesheet" href="css/style.css?v=7">
 </head>
 <body>
 
@@ -294,7 +297,7 @@
     <p class="footer-date">07 · 17 · 2027</p>
   </footer>
 
-  <script src="js/main.js"></script>
-  <script src="js/rsvp.js"></script>
+  <script src="js/main.js?v=7"></script>
+  <script src="js/rsvp.js?v=7"></script>
 </body>
 </html>

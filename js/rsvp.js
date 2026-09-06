@@ -35,6 +35,14 @@ let options = null;
 const DEBUG = new URLSearchParams(location.search).has("debug");
 const DEBUG_TOKEN = "sj-diag-7Q2m";
 
+// Bumped alongside the ?v= in index.html. Printed on load so a stale cached
+// copy is obvious from the console instead of being mistaken for a bug.
+const CLIENT_VERSION = "7";
+console.log(
+  "[RSVP] client v" + CLIENT_VERSION +
+  (DEBUG ? " — debug mode ON" : " — add ?debug=1 to the URL to see raw errors")
+);
+
 // Apps Script rejects a JSON content-type preflight, so send text/plain — the
 // script parses the body itself and this stays a simple CORS request.
 async function callApi(payload) {
@@ -399,6 +407,61 @@ function escapeHtml(s) {
   }[c]));
 }
 
+/* ---------- Debug panel ---------- */
+
+/**
+ * Shown only with ?debug=1. Runs the same request the form makes and prints the
+ * raw result on the page, so a failure can be read without opening DevTools.
+ */
+function mountDebugPanel() {
+  const panel = document.createElement("div");
+  panel.className = "rsvp-debug";
+  panel.innerHTML = `
+    <p><strong>Debug mode</strong> — client v${CLIENT_VERSION}</p>
+    <button type="button" id="rsvp-debug-run">Run connection test</button>
+    <pre id="rsvp-debug-out">Not run yet.</pre>
+  `;
+  el.root.appendChild(panel);
+
+  const out = panel.querySelector("#rsvp-debug-out");
+
+  panel.querySelector("#rsvp-debug-run").addEventListener("click", async () => {
+    const lines = ["client version: " + CLIENT_VERSION, "endpoint: " + RSVP_ENDPOINT, ""];
+    out.textContent = "Running…";
+
+    // Step 1: can the browser reach the endpoint at all?
+    try {
+      const res = await fetch(RSVP_ENDPOINT, { method: "GET", redirect: "follow" });
+      const text = await res.text();
+      lines.push("GET status: " + res.status);
+      lines.push("GET body: " + text.slice(0, 300));
+    } catch (err) {
+      lines.push("GET FAILED: " + (err && err.message));
+      lines.push("A failure here means the browser is blocking the request —");
+      lines.push("an extension, a content blocker, or a network policy.");
+      out.textContent = lines.join("\n");
+      return;
+    }
+
+    lines.push("");
+
+    // Step 2: the POST the form actually uses, including the backend selftest.
+    try {
+      const data = await callApi({ action: "selftest", token: DEBUG_TOKEN });
+      lines.push("POST selftest ok: " + data.ok);
+      (data.steps || []).forEach((s) => {
+        lines.push((s.ok ? "  PASS  " : "  FAIL  ") + s.step +
+          (s.ok ? "" : " -> " + s.error));
+      });
+      if (data.error) lines.push("error: " + data.error);
+    } catch (err) {
+      lines.push("POST FAILED: " + (err && (err.stack || err.message)));
+    }
+
+    out.textContent = lines.join("\n");
+  });
+}
+
 /* ---------- Wire up ---------- */
 
 if (el.root) {
@@ -417,5 +480,6 @@ if (el.root) {
     );
 
     show("search");
+    if (DEBUG) mountDebugPanel();
   }
 }
