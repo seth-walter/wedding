@@ -30,17 +30,41 @@ let options = null;
 
 /* ---------- Networking ---------- */
 
+// Add ?debug=1 to the page URL to show the underlying error on screen instead
+// of the friendly one, and to ask the backend for its stack trace.
+const DEBUG = new URLSearchParams(location.search).has("debug");
+const DEBUG_TOKEN = "sj-diag-7Q2m";
+
 // Apps Script rejects a JSON content-type preflight, so send text/plain — the
 // script parses the body itself and this stays a simple CORS request.
 async function callApi(payload) {
+  const body = DEBUG ? Object.assign({}, payload, { token: DEBUG_TOKEN }) : payload;
+
   const res = await fetch(RSVP_ENDPOINT, {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
     headers: { "Content-Type": "text/plain;charset=utf-8" },
     redirect: "follow",
   });
-  if (!res.ok) throw new Error("http_" + res.status);
-  return res.json();
+  if (!res.ok) throw new Error("HTTP " + res.status + " from the RSVP endpoint");
+
+  const text = await res.text();
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    // A non-JSON body means Google returned a sign-in or error page rather than
+    // the script's response — worth saying so instead of "invalid JSON".
+    throw new Error("Endpoint returned non-JSON: " + text.slice(0, 200));
+  }
+}
+
+// The real reason behind the friendly message. Logged always so it is one
+// DevTools console away; shown on screen only in debug mode.
+function reportFailure(context, err, serverDetail) {
+  console.error("[RSVP] " + context, err || serverDetail || "");
+  if (!DEBUG) return null;
+  const detail = serverDetail || (err && (err.stack || err.message)) || String(err);
+  return context + " — " + String(detail).slice(0, 600);
 }
 
 /* ---------- Views ---------- */
@@ -86,7 +110,10 @@ async function doSearch() {
     const data = await callApi({ action: "search", firstName, lastName });
 
     if (!data.ok) {
-      showError(ERRORS[data.error] || ERRORS.server_error);
+      showError(
+        reportFailure("search rejected: " + data.error, null, data.detail) ||
+        ERRORS[data.error] || ERRORS.server_error
+      );
       return;
     }
 
@@ -95,7 +122,7 @@ async function doSearch() {
     renderForm();
     show("form");
   } catch (err) {
-    showError(ERRORS.server_error);
+    showError(reportFailure("search failed", err) || ERRORS.server_error);
   } finally {
     el.searchBtn.disabled = false;
     el.searchBtn.textContent = "Find my invitation";
@@ -314,37 +341,45 @@ async function doSubmit() {
     });
 
     if (!data.ok) {
-      showError(ERRORS[data.error] || ERRORS.server_error);
+      showError(
+        reportFailure("submit rejected: " + data.error, null, data.detail) ||
+        ERRORS[data.error] || ERRORS.server_error
+      );
       return;
     }
 
-    const answered = {};
-    rows.forEach((r) => { answered[r.id] = true; });
-    const stillWaiting = household.members.filter(
-      (m) => !answered[m.id] && !m.previous
-    );
+    // The reply is saved from here on. Everything below is presentation, and a
+    // fault in it must never be reported to the guest as a failure — they would
+    // submit again, and their reply is already recorded.
+    try {
+      const answered = {};
+      rows.forEach((r) => { answered[r.id] = true; });
+      const stillWaiting = household.members.filter(
+        (m) => !answered[m.id] && !m.previous
+      );
 
-    el.doneMsg.textContent = data.attending > 0
-      ? "We can't wait to celebrate with you. See you on July 17th!"
-      : "Thank you for letting us know — you'll be missed, and we're grateful you told us.";
+      el.doneMsg.textContent = data.attending > 0
+        ? "We can't wait to celebrate with you. See you on July 17th!"
+        : "Thank you for letting us know — you'll be missed, and we're grateful you told us.";
 
-    // Whoever was left unanswered can still come back and reply themselves.
-    // Guarded: a browser holding a stale index.html has no such element, and
-    // throwing here would report failure for a reply the server already saved.
-    if (el.doneRemaining) {
-      el.doneRemaining.hidden = stillWaiting.length === 0;
-    }
-    if (el.doneRemaining && stillWaiting.length) {
-      el.doneRemaining.textContent =
-        (stillWaiting.length === 1
-          ? stillWaiting[0].name + " hasn't replied yet"
-          : "Still to reply: " + stillWaiting.map((m) => m.name).join(", ")) +
-        " — they can come back to this page and look up their own name any time.";
+      // Whoever was left unanswered can still come back and reply themselves.
+      if (el.doneRemaining) {
+        el.doneRemaining.hidden = stillWaiting.length === 0;
+        if (stillWaiting.length) {
+          el.doneRemaining.textContent =
+            (stillWaiting.length === 1
+              ? stillWaiting[0].name + " hasn't replied yet"
+              : "Still to reply: " + stillWaiting.map((m) => m.name).join(", ")) +
+            " — they can come back to this page and look up their own name any time.";
+        }
+      }
+    } catch (err) {
+      reportFailure("reply was saved, but the confirmation failed to render", err);
     }
 
     show("done");
   } catch (err) {
-    showError(ERRORS.server_error);
+    showError(reportFailure("submit failed", err) || ERRORS.server_error);
   } finally {
     el.submitBtn.disabled = false;
     el.submitBtn.textContent = "Send our response";
