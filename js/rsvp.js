@@ -6,7 +6,7 @@
 
 // Redeploying the Apps Script as a NEW deployment changes this URL; updating an
 // existing deployment to a new version keeps it. See apps-script/SETUP.md.
-const RSVP_ENDPOINT = "https://script.google.com/macros/s/AKfycbzSw_S0pl1ZB1UNVqaZYU_5b1lNOo4ArwgVgZHdMmmP8NiQGeXvcip7iuLbg8tSjT8GKw/exec";
+const RSVP_ENDPOINT = "https://script.google.com/macros/s/AKfycbyUMlicRBVJ5ta3PEem3OHu-iJA3cSrgawsumWE2_u-NjxtPhV-KyilEF5pa5ZmG1ZciA/exec";
 
 const el = {
   root: document.getElementById("rsvp-app"),
