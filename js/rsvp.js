@@ -37,7 +37,7 @@ const DEBUG_TOKEN = "sj-diag-7Q2m";
 
 // Bumped alongside the ?v= in index.html. Printed on load so a stale cached
 // copy is obvious from the console instead of being mistaken for a bug.
-const CLIENT_VERSION = "7";
+const CLIENT_VERSION = "8";
 console.log(
   "[RSVP] client v" + CLIENT_VERSION +
   (DEBUG ? " — debug mode ON" : " — add ?debug=1 to the URL to see raw errors")
@@ -249,17 +249,17 @@ function renderForm() {
   el.extras.innerHTML = `
     <label class="rsvp-field">
       <span>Email address (optional — so we can send updates)</span>
-      <input type="email" id="rsvp-email" maxlength="200">
+      <input type="email" class="rsvp-in-email" maxlength="200">
     </label>
     ${options.askSongRequest
       ? `<label class="rsvp-field">
            <span>A song that will get you on the dance floor (optional)</span>
-           <input type="text" id="rsvp-song" maxlength="200">
+           <input type="text" class="rsvp-in-song" maxlength="200">
          </label>`
       : ""}
     <label class="rsvp-field">
       <span>A note for Julie &amp; Seth (optional)</span>
-      <textarea id="rsvp-note" rows="3" maxlength="800"></textarea>
+      <textarea class="rsvp-in-note" rows="3" maxlength="800"></textarea>
     </label>
   `;
 }
@@ -343,9 +343,9 @@ async function doSubmit() {
       action: "submit",
       householdId: household.id,
       responses: rows,
-      email: value("rsvp-email"),
-      songRequest: value("rsvp-song"),
-      note: value("rsvp-note"),
+      email: value(".rsvp-in-email"),
+      songRequest: value(".rsvp-in-song"),
+      note: value(".rsvp-in-note"),
     });
 
     if (!data.ok) {
@@ -396,9 +396,14 @@ async function doSubmit() {
 
 /* ---------- Helpers ---------- */
 
-function value(id) {
-  const node = document.getElementById(id);
-  return node ? node.value.trim() : "";
+/**
+ * Reads one of the extra fields. Scoped to the extras container and matched by
+ * class rather than document-wide by id: a page-level element sharing an id
+ * would otherwise win, and reading .value off a paragraph throws.
+ */
+function value(selector) {
+  const node = el.extras.querySelector(selector);
+  return node && typeof node.value === "string" ? node.value.trim() : "";
 }
 
 function escapeHtml(s) {
