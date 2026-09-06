@@ -51,6 +51,11 @@ const CONFIG = {
   // Record every lookup attempt on the Lookup Log tab.
   enableLogging: true,
 
+  // Unlocks the selftest action and error details on failures. Structural
+  // information only — never guest names. Change it to any string you like, or
+  // set it to '' once the RSVP form is confirmed working.
+  debugToken: 'sj-diag-7Q2m',
+
   // Mirror each reply into the Guests tab's own columns, so the guest list you
   // already work from stays current. The RSVPs tab remains the full history.
   writeBack: true,
@@ -88,16 +93,31 @@ const COLUMN_ALIASES = {
  * ------------------------------------------------------------------ */
 
 function doPost(e) {
+  let body = {};
   try {
-    const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+  } catch (err) {
+    return json({ ok: false, error: 'server_error' });
+  }
+
+  try {
     const action = String(body.action || '');
 
     if (action === 'search') return json(handleSearch(body));
     if (action === 'submit') return json(handleSubmit(body));
+    if (action === 'selftest') return json(handleSelfTest(body));
     return json({ ok: false, error: 'unknown_action' });
   } catch (err) {
     console.error(err);
-    return json({ ok: false, error: 'server_error' });
+
+    // Guests get a plain message. A request carrying the debug token also gets
+    // the stack, which is the only practical way to diagnose a failure without
+    // reading the Executions log by hand.
+    const out = { ok: false, error: 'server_error' };
+    if (CONFIG.debugToken && body.token === CONFIG.debugToken) {
+      out.detail = truncate(String((err && err.stack) || err), 900);
+    }
+    return json(out);
   }
 }
 
@@ -106,7 +126,7 @@ function doPost(e) {
  * so you can confirm which version is actually deployed — a deployment left on
  * an old version is otherwise invisible and behaves in confusing ways.
  */
-const VERSION = '2026-09-06.5';
+const VERSION = '2026-09-06.6';
 
 function doGet() {
   // Browsers hitting the URL directly get a harmless response, not the config.
@@ -123,6 +143,134 @@ function json(obj) {
   return ContentService
     .createTextOutput(JSON.stringify(obj))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* ------------------------------------------------------------------ *
+ * Self test
+ * ------------------------------------------------------------------ */
+
+/**
+ * Walks the same path a real submission takes and reports which step fails and
+ * why. Exists because a failure inside Apps Script is otherwise only visible in
+ * the Executions log, which is awkward to get at.
+ *
+ * Reports structure, never guest names. Any cell it writes is restored.
+ */
+function handleSelfTest(body) {
+  if (!CONFIG.debugToken || body.token !== CONFIG.debugToken) {
+    return { ok: false, error: 'unauthorized' };
+  }
+
+  const steps = [];
+
+  function step(name, fn) {
+    try {
+      const info = fn();
+      steps.push({ step: name, ok: true, info: info === undefined ? null : info });
+      return info;
+    } catch (err) {
+      steps.push({
+        step: name,
+        ok: false,
+        error: truncate(String((err && err.message) || err), 400),
+      });
+      return null;
+    }
+  }
+
+  const ctx = step('read Guests tab', function () {
+    const c = readGuestContext();
+    const cols = {};
+    Object.keys(c.cols).forEach(function (k) {
+      if (c.cols[k] >= 0) cols[k] = columnLetter(c.cols[k] + 1);
+    });
+    return {
+      headerRow: c.diagnostics.headerRowNumber,
+      rowsScanned: c.diagnostics.scannedRows,
+      guestsLoaded: c.guests.length,
+      blankRows: c.diagnostics.blankRows.length,
+      halfNamed: c.diagnostics.partialNames.length,
+      columns: cols,
+      sheetRows: c.sheet.getMaxRows(),
+      sheetColumns: c.sheet.getMaxColumns(),
+    };
+  });
+
+  const rsvpSheet = step('open or create RSVPs tab', function () {
+    const s = getOrCreateSheet(CONFIG.rsvpSheetName, [
+      'Timestamp', 'Household', 'Guest', 'Attending',
+      'Meal', 'Dietary', 'Email', 'Song Request', 'Note',
+    ]);
+    return {
+      name: s.getName(),
+      maxRows: s.getMaxRows(),
+      maxColumns: s.getMaxColumns(),
+      lastRow: s.getLastRow(),
+      // 9 columns are needed; a hand-made tab narrower than that throws.
+      wideEnough: s.getMaxColumns() >= 9,
+    };
+  });
+
+  // The write that a real submission performs, then undone.
+  step('write a test row to RSVPs, then remove it', function () {
+    const s = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.rsvpSheetName);
+    const target = s.getLastRow() + 1;
+    s.getRange(target, 1, 1, 9).setValues([[
+      new Date(), '__selftest__', '__selftest__', 'No', '', '', '', '', '',
+    ]]);
+    SpreadsheetApp.flush();
+    s.deleteRow(target);
+    return 'wrote and removed row ' + target;
+  });
+
+  // The mirror write, which is the step most likely to be rejected.
+  step('write the RSVP column on a guest row, then restore it', function () {
+    const c = readGuestContext();
+    if (c.cols.rsvp < 0) return 'no RSVP column found — mirror step is skipped anyway';
+
+    const first = c.guests.filter(function (g) { return !g.isPlusOne; })[0];
+    if (!first) return 'no guests to test against';
+
+    const cell = c.sheet.getRange(first.rowNumber, c.cols.rsvp + 1);
+    const original = cell.getValue();
+    const rule = cell.getDataValidation();
+    const validation = rule ? String(rule.getCriteriaType()) : 'none';
+    const resolved = matchDropdown(cell, CONFIG.rsvpYes);
+
+    try {
+      cell.setValue(resolved);
+      SpreadsheetApp.flush();
+    } finally {
+      cell.setValue(original);
+      SpreadsheetApp.flush();
+    }
+
+    return {
+      row: first.rowNumber,
+      column: columnLetter(c.cols.rsvp + 1),
+      validation: validation,
+      wouldWrite: resolved,
+      accepted: true,
+    };
+  });
+
+  step('lock service', function () {
+    const lock = LockService.getScriptLock();
+    lock.waitLock(5000);
+    lock.releaseLock();
+    return 'acquired and released';
+  });
+
+  step('cache service', function () {
+    CacheService.getScriptCache().put('selftest', '1', 20);
+    return 'usable';
+  });
+
+  return {
+    ok: steps.every(function (s) { return s.ok; }),
+    version: VERSION,
+    steps: steps,
+  };
 }
 
 /* ------------------------------------------------------------------ *
