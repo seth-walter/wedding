@@ -72,7 +72,7 @@ it only has to match between the people you want grouped.
 
 | Column | Written when |
 |---|---|
-| `RSVP` | Always — `Yes` or `No` |
+| `RSVP` | Always — `RSVP'd` or `Declined` |
 | `Meal Choice` | Only if meal options are turned on and the guest picked one |
 | `Dietary Needs` | Only if the cell is **blank** — your own notes are never overwritten |
 | `Plus One Name` | Only if the cell is **blank** and the guest named their plus one |
@@ -80,13 +80,25 @@ it only has to match between the people you want grouped.
 Nothing else in the Guests tab is ever written to. Set `writeBack: false` in
 `Code.gs` if you'd rather keep replies only on the `RSVPs` tab.
 
-**Do you need dropdowns?** No — the script writes plain text and doesn't need
-data validation to work. But if you *do* put a dropdown on the `RSVP` column,
-its options must match what the script writes, or Sheets will flag every cell
-it fills as invalid. Either use `Yes` / `No` as your dropdown options, or change
-`rsvpYes` / `rsvpNo` in `Code.gs` to match the wording you prefer
-(`Attending` / `Declined`, say). Set them before guests start replying, since
-changing later won't rewrite cells already filled in.
+**The RSVP dropdown.** Your `RSVP` column has a dropdown of
+`Pending` / `RSVP'd` / `Declined`, and `Code.gs` is set to match: an accepting
+guest gets `RSVP'd`, a declining one gets `Declined`.
+
+`Pending` is the starting state — the script never writes it. Set it yourself on
+rows you've invited, and it flips as replies arrive, so filtering the column
+tells you at a glance who still owes you an answer.
+
+You don't strictly need the dropdown; the script writes plain text either way.
+What the dropdown buys you is a clean filter view and protection against typos
+when you edit a cell by hand.
+
+One wrinkle it handles for you: if the dropdown's text doesn't exactly match the
+config — a curly `RSVP’d` versus a straight `RSVP'd` is the usual culprit, and
+they are different characters to a computer — the script reads the dropdown's
+real options and writes whichever one corresponds, ignoring case and
+punctuation. So the cell stays valid even if the two spellings drift apart. If
+you rename the options to something unrelated, update `rsvpYes` / `rsvpNo` in
+`Code.gs` and redeploy.
 
 **Plus ones** are read from your existing columns:
 

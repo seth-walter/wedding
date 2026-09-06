@@ -47,6 +47,8 @@ function makeSheet(name, rows) {
   return {
     name,
     rows,
+    // Column index (1-based) -> dropdown options, mimicking data validation.
+    validation: {},
     getDataRange: () => ({ getValues: () => rows }),
     getLastRow: () => rows.length,
     appendRow: (r) => rows.push(r),
@@ -56,6 +58,14 @@ function makeSheet(name, rows) {
       },
       // Single-cell access, used by the write-back path.
       getValue: () => (rows[row - 1] || [])[col - 1],
+      getDataValidation: function () {
+        const opts = sheets[name] && sheets[name].validation[col];
+        if (!opts) return null;
+        return {
+          getCriteriaType: () => "VALUE_IN_LIST",
+          getCriteriaValues: () => [opts],
+        };
+      },
       setValue: (v) => {
         while (rows.length < row) rows.push([]);
         if (!rows[row - 1]) rows[row - 1] = [];
@@ -221,14 +231,14 @@ const H = G[1];                                  // header row
 const cIdx = (name) => H.indexOf(name);
 const guestRow = (name) => G.find(r => (r[1] + " " + r[2]) === name);
 
-check("Anna's RSVP cell says Yes", guestRow("Anna Reed")[cIdx("RSVP")], "Yes");
-check("David's RSVP cell says No", guestRow("David Reed")[cIdx("RSVP")], "No");
+check("Anna's RSVP cell says RSVP'd", guestRow("Anna Reed")[cIdx("RSVP")], "RSVP'd");
+check("David's RSVP cell says Declined", guestRow("David Reed")[cIdx("RSVP")], "Declined");
 check("Anna's dietary note written to the blank cell",
   guestRow("Anna Reed")[cIdx("Dietary Needs")], "No shellfish");
 check("guest-supplied plus one name filled in",
   guestRow("José García")[cIdx("Plus One Name")], "Sofia Ruiz");
 check("plus one did NOT overwrite the host's RSVP",
-  guestRow("José García")[cIdx("RSVP")], "Yes");
+  guestRow("José García")[cIdx("RSVP")], "RSVP'd");
 check("untouched guest keeps a blank RSVP",
   guestRow("Lena Frost")[cIdx("RSVP")] || "", "");
 
@@ -247,7 +257,39 @@ check("does not overwrite an existing dietary note",
 check("does not overwrite an existing plus one name",
   guestRow("Priya Nair")[cIdx("Plus One Name")], "Rahul Nair");
 check("but does record Priya's own RSVP",
-  guestRow("Priya Nair")[cIdx("RSVP")], "Yes");
+  guestRow("Priya Nair")[cIdx("RSVP")], "RSVP'd");
+
+console.log("\n--- matching the RSVP dropdown ---");
+// The real sheet's dropdown is Pending / RSVP'd / Declined. Point the stub's
+// validation at a CURLY apostrophe, which is what Sheets often stores, and
+// confirm the script writes the sheet's spelling rather than the config's.
+sheets["Guests"].validation[cIdx("RSVP") + 1] = ["Pending", "RSVP’d", "Declined"];
+
+handleSubmit({
+  householdId: "Ng A",
+  responses: [{ id: guests.find(g => g.displayName === "Jo Ng").id, attending: true }],
+});
+check("writes the dropdown's curly-apostrophe spelling",
+  guestRow("Jo Ng")[cIdx("RSVP")], "RSVP’d");
+
+handleSubmit({
+  householdId: "Ng B",
+  responses: [{ id: guests.find(g => g.displayName === "Bo Ng").id, attending: false }],
+});
+check("matches Declined through the dropdown too",
+  guestRow("Bo Ng")[cIdx("RSVP")], "Declined");
+
+// A dropdown that shares no wording with the config must not silently write a
+// wrong option — fall back to the configured value.
+sheets["Guests"].validation[cIdx("RSVP") + 1] = ["Alpha", "Beta"];
+handleSubmit({
+  householdId: "Anderson",
+  responses: [{ id: guests.find(g => g.displayName === "Christopher Anderson").id, attending: true }],
+});
+check("unrelated dropdown falls back to the configured value",
+  guestRow("Christopher Anderson")[cIdx("RSVP")], "RSVP'd");
+
+delete sheets["Guests"].validation[cIdx("RSVP") + 1];
 
 console.log("\n--- submit: forged requests ---");
 const rowsBefore = sheets["RSVPs"].rows.length;

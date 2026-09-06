@@ -55,10 +55,14 @@ const CONFIG = {
   // already work from stays current. The RSVPs tab remains the full history.
   writeBack: true,
 
-  // Exactly what lands in the RSVP column. If that column has a dropdown, these
-  // must match its options or Sheets will flag the cell as invalid.
-  rsvpYes: 'Yes',
-  rsvpNo: 'No',
+  // What lands in the RSVP column, matching its dropdown (Pending / RSVP'd /
+  // Declined). "Pending" is the starting state and is never written here.
+  //
+  // If the dropdown's exact text differs — a curly apostrophe, say — the script
+  // still matches it: it reads the dropdown's real options and uses whichever
+  // one corresponds, ignoring case and punctuation.
+  rsvpYes: "RSVP'd",
+  rsvpNo: 'Declined',
 };
 
 /**
@@ -299,8 +303,8 @@ function writeBackToGuestSheet(ctx, accepted) {
     }
 
     if (cols.rsvp >= 0) {
-      sheet.getRange(guest.rowNumber, cols.rsvp + 1)
-        .setValue(r.attending ? CONFIG.rsvpYes : CONFIG.rsvpNo);
+      const cell = sheet.getRange(guest.rowNumber, cols.rsvp + 1);
+      cell.setValue(matchDropdown(cell, r.attending ? CONFIG.rsvpYes : CONFIG.rsvpNo));
     }
 
     if (cols.meal >= 0 && r.meal) {
@@ -314,6 +318,36 @@ function writeBackToGuestSheet(ctx, accepted) {
       }
     }
   });
+}
+
+/**
+ * If a cell has a dropdown, returns the dropdown option corresponding to the
+ * value we want to write, spelled exactly as the sheet spells it. Comparison
+ * ignores case and punctuation, so "RSVP'd" still matches a dropdown holding
+ * "RSVP’d" with a curly apostrophe — a mismatch that would otherwise mark every
+ * cell the script fills as invalid.
+ *
+ * Falls back to the configured value when there is no dropdown, or when nothing
+ * in it corresponds.
+ */
+function matchDropdown(cell, desired) {
+  try {
+    const rule = cell.getDataValidation();
+    if (!rule) return desired;
+    if (String(rule.getCriteriaType()) !== 'VALUE_IN_LIST') return desired;
+
+    const options = rule.getCriteriaValues()[0] || [];
+    const want = normalize(desired);
+
+    for (let i = 0; i < options.length; i++) {
+      if (normalize(options[i]) === want) return options[i];
+    }
+  } catch (err) {
+    // A sheet with no validation set up at all can throw here; not worth
+    // failing a guest's RSVP over.
+    console.error('dropdown lookup failed', err);
+  }
+  return desired;
 }
 
 /* ------------------------------------------------------------------ *
