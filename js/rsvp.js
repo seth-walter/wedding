@@ -63,6 +63,7 @@ const ERRORS = {
   ambiguous:
     "We found more than one possible match. Please enter your name exactly as it appears on your invitation.",
   rate_limited: "Things are busy right now. Please wait a moment and try again.",
+  bad_request: "We couldn't read that response. Please reload the page and try again.",
   server_error: "Something went wrong on our end. Please try again in a minute.",
 };
 
@@ -106,11 +107,17 @@ async function doSearch() {
 function renderForm() {
   el.guests.innerHTML = "";
 
-  const others = household.members.filter((m) => m.id !== household.matchedId);
+  // An older deployment of the Apps Script does not send matchedId. Without a
+  // fallback nobody would be marked "you", every row would default to "they'll
+  // reply themselves", and submitting would post an empty reply.
+  const matchedId = household.matchedId ||
+    (household.members[0] && household.members[0].id);
+
+  const others = household.members.filter((m) => m.id !== matchedId);
   const pending = others.filter((m) => !m.previous);
 
   household.members.forEach((m) => {
-    const isYou = m.id === household.matchedId;
+    const isYou = m.id === matchedId;
     // Someone else's existing reply stands unless this guest chooses to change
     // it, so it starts collapsed behind a summary rather than as live radios.
     const locked = !isYou && !!m.previous;
@@ -285,6 +292,13 @@ async function doSubmit() {
     return;
   }
 
+  // Nothing to send: everyone was left for someone else to answer for. Say so
+  // rather than posting an empty reply and surfacing a server error.
+  if (rows.length === 0) {
+    showError("Please choose a response for at least one person before sending.");
+    return;
+  }
+
   showError("");
   el.submitBtn.disabled = true;
   el.submitBtn.textContent = "Sending…";
@@ -315,8 +329,12 @@ async function doSubmit() {
       : "Thank you for letting us know — you'll be missed, and we're grateful you told us.";
 
     // Whoever was left unanswered can still come back and reply themselves.
-    el.doneRemaining.hidden = stillWaiting.length === 0;
-    if (stillWaiting.length) {
+    // Guarded: a browser holding a stale index.html has no such element, and
+    // throwing here would report failure for a reply the server already saved.
+    if (el.doneRemaining) {
+      el.doneRemaining.hidden = stillWaiting.length === 0;
+    }
+    if (el.doneRemaining && stillWaiting.length) {
       el.doneRemaining.textContent =
         (stillWaiting.length === 1
           ? stillWaiting[0].name + " hasn't replied yet"

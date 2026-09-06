@@ -101,9 +101,22 @@ function doPost(e) {
   }
 }
 
+/**
+ * Bumped whenever the contract with the website changes. Visible on a plain GET
+ * so you can confirm which version is actually deployed — a deployment left on
+ * an old version is otherwise invisible and behaves in confusing ways.
+ */
+const VERSION = '2026-09-06.4';
+
 function doGet() {
   // Browsers hitting the URL directly get a harmless response, not the config.
-  return json({ ok: true, service: 'rsvp' });
+  // No guest data here: this only reports what is deployed.
+  return json({
+    ok: true,
+    service: 'rsvp',
+    version: VERSION,
+    features: ['matchedId', 'plusOnes', 'partialNames', 'writeBack', 'dropdownMatch'],
+  });
 }
 
 function json(obj) {
