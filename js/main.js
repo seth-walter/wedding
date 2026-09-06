@@ -10,7 +10,7 @@ const WEDDING = {
   ceremonyEnd: "2027-07-17T22:00:00",
   venueName: "Rixey Manor",
   venueAddress: "9155 Pleasant Hill Dr, Rixeyville, VA 22737",
-  description: "The wedding of Julie & Seth. See https://seth-walter.github.io/sj-wedding-website/ for details.",
+  description: "The wedding of Julie & Seth. See https://seth-walter.github.io/wedding/ for details.",
 };
 
 /* ---------- Mobile nav ---------- */
