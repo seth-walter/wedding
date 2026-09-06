@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Julie &amp; Seth</title>
+  <meta name="description" content="Julie & Seth are getting married — join us to celebrate!">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Proza+Libre:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ============ NAV ============ -->
+  <header class="nav" id="top">
+    <a class="nav-brand" href="#top">J <span class="amp">&amp;</span> S</a>
+    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <nav class="nav-links">
+      <a href="#story">Our Story</a>
+      <a href="#day">The Day</a>
+      <a href="#travel">Travel</a>
+      <a href="#registry">Registry</a>
+      <a href="#faq">FAQ</a>
+      <a href="#gallery">Gallery</a>
+      <a class="nav-rsvp" href="#rsvp">RSVP</a>
+    </nav>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="hero">
+    <div class="hero-inner">
+      <svg class="botanical botanical-top" viewBox="0 0 200 60" aria-hidden="true">
+        <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+          <path d="M20 45 Q100 15 180 45"/>
+          <path d="M55 33 q-4 -12 -14 -14 q6 12 14 14z" fill="currentColor" stroke="none"/>
+          <path d="M80 26 q-2 -13 -11 -17 q3 13 11 17z" fill="currentColor" stroke="none"/>
+          <path d="M120 26 q2 -13 11 -17 q-3 13 -11 17z" fill="currentColor" stroke="none"/>
+          <path d="M145 33 q4 -12 14 -14 q-6 12 -14 14z" fill="currentColor" stroke="none"/>
+          <circle cx="100" cy="22" r="3" fill="currentColor" stroke="none"/>
+        </g>
+      </svg>
+      <p class="hero-pre">You are invited to celebrate</p>
+      <h1 class="hero-names">Julie <span class="amp">&amp;</span> Seth</h1>
+      <p class="hero-date" id="hero-date">Saturday, June 12, 2027</p>
+      <p class="hero-venue" id="hero-venue">The Willow Barn · Charlottesville, Virginia</p>
+
+      <div class="countdown" id="countdown" aria-label="Countdown to the wedding">
+        <div class="count-unit"><span id="cd-days">–</span><small>days</small></div>
+        <div class="count-unit"><span id="cd-hours">–</span><small>hours</small></div>
+        <div class="count-unit"><span id="cd-mins">–</span><small>minutes</small></div>
+        <div class="count-unit"><span id="cd-secs">–</span><small>seconds</small></div>
+      </div>
+
+      <a class="btn btn-primary" href="#rsvp">RSVP</a>
+    </div>
+  </section>
+
+  <main>
+
+  <!-- ============ OUR STORY ============ -->
+  <section class="section" id="story">
+    <div class="section-inner narrow">
+      <h2>Our Story</h2>
+      <div class="divider" aria-hidden="true"><span>❧</span></div>
+      <div class="prose" id="story-text">
+        <p>Every love story is beautiful, but ours is our favorite. It started the way
+        the best things do — unexpectedly, in the middle of an ordinary day that
+        turned out to be anything but.</p>
+        <p>From that first conversation, something just clicked. What followed were
+        years of laughter, adventures big and small, and the quiet certainty that
+        we'd found our person.</p>
+      </div>
+
+      <h3 class="subheading">The Proposal</h3>
+      <div class="prose" id="proposal-text">
+        <p>On a golden evening we'll never forget, Seth got down on one knee — and
+        somewhere between the happy tears and the yes, the rest of our lives began.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THE DAY ============ -->
+  <section class="section section-alt" id="day">
+    <div class="section-inner">
+      <h2>The Day</h2>
+      <div class="divider" aria-hidden="true"><span>❧</span></div>
+      <div class="cards two">
+        <div class="card">
+          <p class="card-kicker">Ceremony</p>
+          <p class="card-time" id="ceremony-time">4:00 in the afternoon</p>
+          <p class="card-detail" id="ceremony-place">The Willow Barn — Garden Lawn</p>
+        </div>
+        <div class="card">
+          <p class="card-kicker">Reception</p>
+          <p class="card-time" id="reception-time">5:30 in the evening</p>
+          <p class="card-detail" id="reception-place">Dinner, dancing &amp; toasts to follow</p>
+        </div>
+      </div>
+
+      <p class="note" id="unplugged-note">
+        <em>We're having an unplugged ceremony — please tuck phones and cameras away
+        and be fully present with us. Our photographer will capture it all.</em>
+      </p>
+
+      <div class="calendar-buttons">
+        <a class="btn btn-outline" id="gcal-link" href="#" target="_blank" rel="noopener">Add to Google Calendar</a>
+        <button class="btn btn-outline" id="ics-btn" type="button">Apple / Outlook (.ics)</button>
+      </div>
+
+      <h3 class="subheading">Dress Code</h3>
+      <div class="prose center">
+        <p id="dress-code"><strong>Garden Formal</strong> — suits and summer gowns welcome.
+        Ladies, we'd skip the stilettos: the ceremony is on the lawn.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TRAVEL & LOCAL GUIDE ============ -->
+  <section class="section" id="travel">
+    <div class="section-inner">
+      <h2>Travel &amp; Local Guide</h2>
+      <div class="divider" aria-hidden="true"><span>❧</span></div>
+
+      <h3 class="subheading">Where to Stay</h3>
+      <div class="cards three" id="stay-cards">
+        <div class="card">
+          <p class="card-kicker">Hotel</p>
+          <h4>The Draftsman</h4>
+          <p class="card-detail">Boutique hotel downtown · 15 min from the venue</p>
+          <p class="card-meta">Room block under “Walter Wedding”</p>
+        </div>
+        <div class="card">
+          <p class="card-kicker">Hotel</p>
+          <h4>Omni Charlottesville</h4>
+          <p class="card-detail">On the Downtown Mall · 20 min from the venue</p>
+          <p class="card-meta">Walkable to restaurants &amp; shops</p>
+        </div>
+        <div class="card">
+          <p class="card-kicker">Alternative</p>
+          <h4>Local B&amp;Bs / Airbnb</h4>
+          <p class="card-detail">Plenty of charming stays in the countryside nearby</p>
+          <p class="card-meta">Book early — June is busy season</p>
+        </div>
+      </div>
+
+      <h3 class="subheading">Things to Do</h3>
+      <div class="cards three" id="todo-cards">
+        <div class="card">
+          <p class="card-kicker">Winery</p>
+          <h4>King Family Vineyards</h4>
+          <p class="card-detail">Rolling-hill views and Sunday polo · 25 min</p>
+        </div>
+        <div class="card">
+          <p class="card-kicker">Historic</p>
+          <h4>Monticello</h4>
+          <p class="card-detail">Jefferson's mountaintop home · 30 min</p>
+        </div>
+        <div class="card">
+          <p class="card-kicker">Outdoors</p>
+          <h4>Blue Ridge Parkway</h4>
+          <p class="card-detail">Hikes and overlooks worth the drive · 40 min</p>
+        </div>
+      </div>
+
+      <h3 class="subheading">Getting There</h3>
+      <div class="map-wrap">
+        <iframe id="venue-map" title="Venue map"
+          src="https://www.google.com/maps?q=Charlottesville%2C+Virginia&output=embed"
+          loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REGISTRY ============ -->
+  <section class="section section-alt" id="registry">
+    <div class="section-inner narrow">
+      <h2>Registry</h2>
+      <div class="divider" aria-hidden="true"><span>❧</span></div>
+      <div class="prose center">
+        <p>Your presence is the greatest gift. For those who wish to give something
+        more, we've registered at the places below.</p>
+      </div>
+      <div class="registry-links" id="registry-links">
+        <a class="btn btn-outline" href="#" target="_blank" rel="noopener">Zola</a>
+        <a class="btn btn-outline" href="#" target="_blank" rel="noopener">Crate &amp; Barrel</a>
+        <a class="btn btn-outline" href="#" target="_blank" rel="noopener">Honeymoon Fund</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FAQ ============ -->
+  <section class="section" id="faq">
+    <div class="section-inner narrow">
+      <h2>FAQ</h2>
+      <div class="divider" aria-hidden="true"><span>❧</span></div>
+      <div class="faq-list" id="faq-list">
+        <details class="faq-item">
+          <summary>Can I bring a plus one?</summary>
+          <p>Please check your invitation — if your guest is invited, their name will
+          appear when you RSVP.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Are children welcome?</summary>
+          <p>We love your little ones, but this will be an adults-only celebration.</p>
+        </details>
+        <details class="faq-item">
+          <summary>What time should I arrive?</summary>
+          <p>Please plan to be seated 20–30 minutes before the ceremony begins.</p>
+        </details>
+        <details class="faq-item">
+          <summary>Is there parking at the venue?</summary>
+          <p>Yes — free parking is available on site, with attendants to guide you.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GALLERY ============ -->
+  <section class="section section-alt" id="gallery">
+    <div class="section-inner">
+      <h2>Gallery</h2>
+      <div class="divider" aria-hidden="true"><span>❧</span></div>
+      <div class="gallery-grid" id="gallery-grid">
+        <p class="gallery-empty" id="gallery-empty">Photos coming soon ♡</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ RSVP ============ -->
+  <section class="section" id="rsvp">
+    <div class="section-inner narrow center-all">
+      <h2>RSVP</h2>
+      <div class="divider" aria-hidden="true"><span>❧</span></div>
+      <div class="prose center">
+        <p id="rsvp-note">Kindly reply by <strong>May 1, 2027</strong>. Search for your
+        name and let us know if you can make it — we truly hope you can!</p>
+      </div>
+      <a class="btn btn-primary btn-lg" href="https://rixey-app.vercel.app/w/seth-and-julie"
+         target="_blank" rel="noopener">Find your invitation &amp; RSVP</a>
+    </div>
+  </section>
+
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <svg class="botanical" viewBox="0 0 200 60" aria-hidden="true">
+      <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round">
+        <path d="M20 20 Q100 50 180 20"/>
+        <path d="M55 32 q-4 12 -14 14 q6 -12 14 -14z" fill="currentColor" stroke="none"/>
+        <path d="M145 32 q4 12 14 14 q-6 -12 -14 -14z" fill="currentColor" stroke="none"/>
+        <circle cx="100" cy="42" r="3" fill="currentColor" stroke="none"/>
+      </g>
+    </svg>
+    <p class="footer-names">Julie <span class="amp">&amp;</span> Seth</p>
+    <p class="footer-msg" id="footer-msg">We can't wait to celebrate with you.</p>
+    <p class="footer-date">06 · 12 · 2027</p>
+  </footer>
+
+  <script src="js/main.js"></script>
+</body>
+</html>
