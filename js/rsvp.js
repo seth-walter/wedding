@@ -4,7 +4,9 @@
    Paste your deployed web-app URL below (see apps-script/SETUP.md).
    ============================================================ */
 
-const RSVP_ENDPOINT = ""; // e.g. "https://script.google.com/macros/s/AKfy.../exec"
+// Redeploying the Apps Script as a NEW deployment changes this URL; updating an
+// existing deployment to a new version keeps it. See apps-script/SETUP.md.
+const RSVP_ENDPOINT = "https://script.google.com/macros/s/AKfycbzSw_S0pl1ZB1UNVqaZYU_5b1lNOo4ArwgVgZHdMmmP8NiQGeXvcip7iuLbg8tSjT8GKw/exec";
 
 const el = {
   root: document.getElementById("rsvp-app"),
