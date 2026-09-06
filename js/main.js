@@ -6,10 +6,10 @@
 const WEDDING = {
   names: "Julie & Seth",
   // Local time at the venue. Format: YYYY-MM-DDTHH:MM:SS
-  ceremonyStart: "2027-06-12T16:00:00",
-  ceremonyEnd: "2027-06-12T23:00:00",
-  venueName: "The Willow Barn",
-  venueAddress: "Charlottesville, Virginia",
+  ceremonyStart: "2027-07-17T15:30:00",
+  ceremonyEnd: "2027-07-17T22:00:00",
+  venueName: "Rixey Manor",
+  venueAddress: "9155 Pleasant Hill Dr, Rixeyville, VA 22737",
   description: "The wedding of Julie & Seth. See https://seth-walter.github.io/sj-wedding-website/ for details.",
 };
 
