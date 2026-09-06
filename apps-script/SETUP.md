@@ -63,6 +63,31 @@ alone. Scan that list and fill in `Household` for anyone invited alongside
 someone else. Any consistent label works — `Reed`, `Reed Family`, `smith-04` —
 it only has to match between the people you want grouped.
 
+**Where replies land.** Two places, automatically:
+
+- The **`RSVPs` tab** (created for you) gets one row per guest per submission —
+  the full history, including anyone who changes their answer.
+- Your **`Guests` tab** is updated in place, so the list you already work from
+  stays current:
+
+| Column | Written when |
+|---|---|
+| `RSVP` | Always — `Yes` or `No` |
+| `Meal Choice` | Only if meal options are turned on and the guest picked one |
+| `Dietary Needs` | Only if the cell is **blank** — your own notes are never overwritten |
+| `Plus One Name` | Only if the cell is **blank** and the guest named their plus one |
+
+Nothing else in the Guests tab is ever written to. Set `writeBack: false` in
+`Code.gs` if you'd rather keep replies only on the `RSVPs` tab.
+
+**Do you need dropdowns?** No — the script writes plain text and doesn't need
+data validation to work. But if you *do* put a dropdown on the `RSVP` column,
+its options must match what the script writes, or Sheets will flag every cell
+it fills as invalid. Either use `Yes` / `No` as your dropdown options, or change
+`rsvpYes` / `rsvpNo` in `Code.gs` to match the wording you prefer
+(`Attending` / `Declined`, say). Set them before guests start replying, since
+changing later won't rewrite cells already filled in.
+
 **Plus ones** are read from your existing columns:
 
 - `Plus One Name` filled in → that person appears by name in the party, and can

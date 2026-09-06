@@ -50,6 +50,15 @@ const CONFIG = {
 
   // Record every lookup attempt on the Lookup Log tab.
   enableLogging: true,
+
+  // Mirror each reply into the Guests tab's own columns, so the guest list you
+  // already work from stays current. The RSVPs tab remains the full history.
+  writeBack: true,
+
+  // Exactly what lands in the RSVP column. If that column has a dropdown, these
+  // must match its options or Sheets will flag the cell as invalid.
+  rsvpYes: 'Yes',
+  rsvpNo: 'No',
 };
 
 /**
@@ -65,6 +74,9 @@ const COLUMN_ALIASES = {
   email: ['email', 'e mail', 'email address'],
   plusOneName: ['plus one name', 'plus 1 name', 'guest of', 'plus one guest'],
   plusOneAllowed: ['plus one', 'plus 1', 'plus one allowed', 'guest allowed'],
+  rsvp: ['rsvp', 'rsvp status', 'attending', 'response', 'reply'],
+  meal: ['meal choice', 'meal', 'entree', 'dinner choice', 'food choice'],
+  dietary: ['dietary needs', 'dietary', 'dietary restrictions', 'allergies', 'dietary requirements'],
 };
 
 /* ------------------------------------------------------------------ *
@@ -191,8 +203,8 @@ function handleSubmit(body) {
     return { ok: false, error: 'bad_request' };
   }
 
-  const guests = readGuests();
-  const members = guests.filter(function (g) { return g.household === householdId; });
+  const ctx = readGuestContext();
+  const members = ctx.guests.filter(function (g) { return g.household === householdId; });
 
   if (members.length === 0) {
     return { ok: false, error: 'not_found' };
@@ -204,12 +216,15 @@ function handleSubmit(body) {
   members.forEach(function (g) { validIds[g.id] = g; });
 
   const rows = [];
+  const accepted = [];
   const now = new Date();
 
   for (let i = 0; i < responses.length; i++) {
     const r = responses[i];
     const guest = validIds[String(r.id)];
     if (!guest) continue;
+
+    accepted.push({ guest: guest, response: r });
 
     // An unnamed plus one is the one case where the guest supplies the name.
     let name = guest.displayName;
@@ -242,6 +257,10 @@ function handleSubmit(body) {
       'Meal', 'Dietary', 'Email', 'Song Request', 'Note',
     ]);
     sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+
+    if (CONFIG.writeBack) {
+      writeBackToGuestSheet(ctx, accepted);
+    }
   } finally {
     lock.releaseLock();
   }
@@ -250,18 +269,74 @@ function handleSubmit(body) {
   return { ok: true, attending: attending, total: rows.length };
 }
 
+/**
+ * Mirrors a reply into the Guests tab so the list you already work from stays
+ * current — no cross-referencing another tab to see who has replied.
+ *
+ * Only ever touches columns meant to hold a reply, and only for rows in the
+ * household that just submitted. Dietary Needs and Plus One Name are filled in
+ * solely when blank, so notes you typed yourself are never overwritten.
+ */
+function writeBackToGuestSheet(ctx, accepted) {
+  const cols = ctx.cols;
+  const sheet = ctx.sheet;
+
+  accepted.forEach(function (entry) {
+    const guest = entry.guest;
+    const r = entry.response;
+
+    // A plus one has no row of its own; it shares the host's. Recording a
+    // status there would overwrite the host's own reply.
+    if (guest.isPlusOne) {
+      // The one useful exception: a name the guest supplied, if we had none.
+      if (guest.needsName && r.name && cols.plusOneName >= 0) {
+        const cell = sheet.getRange(guest.rowNumber, cols.plusOneName + 1);
+        if (!String(cell.getValue() || '').trim()) {
+          cell.setValue(truncate(String(r.name).trim(), 80));
+        }
+      }
+      return;
+    }
+
+    if (cols.rsvp >= 0) {
+      sheet.getRange(guest.rowNumber, cols.rsvp + 1)
+        .setValue(r.attending ? CONFIG.rsvpYes : CONFIG.rsvpNo);
+    }
+
+    if (cols.meal >= 0 && r.meal) {
+      sheet.getRange(guest.rowNumber, cols.meal + 1).setValue(truncate(r.meal, 100));
+    }
+
+    if (cols.dietary >= 0 && r.dietary) {
+      const cell = sheet.getRange(guest.rowNumber, cols.dietary + 1);
+      if (!String(cell.getValue() || '').trim()) {
+        cell.setValue(truncate(r.dietary, 500));
+      }
+    }
+  });
+}
+
 /* ------------------------------------------------------------------ *
  * Reading the guest list
  * ------------------------------------------------------------------ */
 
 function readGuests() {
+  return readGuestContext().guests;
+}
+
+/**
+ * Reads the Guests tab once and hands back everything callers need: the sheet
+ * itself, where each column landed, and the parsed guests. Submissions need the
+ * sheet and columns to write results back, so keep them together.
+ */
+function readGuestContext() {
   const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(CONFIG.guestSheetName);
   if (!sheet) {
     throw new Error('No tab named "' + CONFIG.guestSheetName + '" in this spreadsheet.');
   }
 
   const values = sheet.getDataRange().getValues();
-  if (values.length < 2) return [];
+  if (values.length < 2) return { sheet: sheet, cols: {}, guests: [] };
 
   const headerIndex = findHeaderRow(values);
   const cols = mapColumns(values[headerIndex]);
@@ -293,6 +368,7 @@ function readGuests() {
 
     guests.push({
       id: 'g' + (r + 1),
+      rowNumber: r + 1,          // 1-indexed sheet row, for writing results back
       displayName: displayName,
       normalized: normalize(first) + ' ' + normalize(last),
       household: household,
@@ -311,6 +387,7 @@ function readGuests() {
     if (plusName) {
       guests.push({
         id: 'g' + (r + 1) + 'p',
+        rowNumber: r + 1,        // shares the host's row
         displayName: plusName,
         normalized: normalize(plusName),
         household: household,
@@ -320,6 +397,7 @@ function readGuests() {
     } else if (plusAllowed) {
       guests.push({
         id: 'g' + (r + 1) + 'p',
+        rowNumber: r + 1,
         displayName: 'Guest of ' + displayName,
         normalized: '',           // unnamed: never matchable by search
         household: household,
@@ -330,7 +408,7 @@ function readGuests() {
     }
   }
 
-  return guests;
+  return { sheet: sheet, cols: cols, guests: guests, headerIndex: headerIndex };
 }
 
 /**

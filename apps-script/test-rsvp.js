@@ -54,6 +54,13 @@ function makeSheet(name, rows) {
       setValues: (vals) => {
         for (let i = 0; i < vals.length; i++) rows[row - 1 + i] = vals[i];
       },
+      // Single-cell access, used by the write-back path.
+      getValue: () => (rows[row - 1] || [])[col - 1],
+      setValue: (v) => {
+        while (rows.length < row) rows.push([]);
+        if (!rows[row - 1]) rows[row - 1] = [];
+        rows[row - 1][col - 1] = v;
+      },
       setFontWeight: () => {},
     }),
     setFrozenRows: () => {},
@@ -207,6 +214,40 @@ check("accepts a named-at-RSVP plus one", r.ok, true);
 check("records the supplied plus one name",
   sheets["RSVPs"].rows[sheets["RSVPs"].rows.length - 1][2],
   "Sofia Ruiz (guest of José García)");
+
+console.log("\n--- write-back into the Guests tab ---");
+const G = sheets["Guests"].rows;
+const H = G[1];                                  // header row
+const cIdx = (name) => H.indexOf(name);
+const guestRow = (name) => G.find(r => (r[1] + " " + r[2]) === name);
+
+check("Anna's RSVP cell says Yes", guestRow("Anna Reed")[cIdx("RSVP")], "Yes");
+check("David's RSVP cell says No", guestRow("David Reed")[cIdx("RSVP")], "No");
+check("Anna's dietary note written to the blank cell",
+  guestRow("Anna Reed")[cIdx("Dietary Needs")], "No shellfish");
+check("guest-supplied plus one name filled in",
+  guestRow("José García")[cIdx("Plus One Name")], "Sofia Ruiz");
+check("plus one did NOT overwrite the host's RSVP",
+  guestRow("José García")[cIdx("RSVP")], "Yes");
+check("untouched guest keeps a blank RSVP",
+  guestRow("Lena Frost")[cIdx("RSVP")] || "", "");
+
+// Existing notes must survive: Priya already has a dietary note and a named
+// plus one, and a reply must not overwrite either.
+G.find(r => r[1] === "Priya")[cIdx("Dietary Needs")] = "Coeliac";
+handleSubmit({
+  householdId: "Nair",
+  responses: [
+    { id: guests.find(g => g.displayName === "Priya Nair").id, attending: true, dietary: "None" },
+    { id: namedPlus.id, attending: true },
+  ],
+});
+check("does not overwrite an existing dietary note",
+  guestRow("Priya Nair")[cIdx("Dietary Needs")], "Coeliac");
+check("does not overwrite an existing plus one name",
+  guestRow("Priya Nair")[cIdx("Plus One Name")], "Rahul Nair");
+check("but does record Priya's own RSVP",
+  guestRow("Priya Nair")[cIdx("RSVP")], "Yes");
 
 console.log("\n--- submit: forged requests ---");
 const rowsBefore = sheets["RSVPs"].rows.length;
