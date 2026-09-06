@@ -496,6 +496,174 @@ a { color: var(--accent-dk); }
 
 .lightbox[hidden] { display: none; }
 
+/* ---------- RSVP form ---------- */
+
+#rsvp-app { margin-top: 2rem; text-align: left; }
+
+.rsvp-name-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  max-width: 32rem;
+  margin: 0 auto;
+}
+
+.rsvp-field {
+  display: block;
+  margin-bottom: 1rem;
+}
+
+.rsvp-field > span {
+  display: block;
+  font-size: 0.76rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.4rem;
+}
+
+.rsvp-field input,
+.rsvp-field select,
+.rsvp-field textarea {
+  width: 100%;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 0.7rem 0.9rem;
+}
+
+.rsvp-field input:focus,
+.rsvp-field select:focus,
+.rsvp-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(116, 132, 95, 0.15);
+}
+
+.rsvp-field textarea { resize: vertical; }
+
+.rsvp-hint {
+  text-align: center;
+  font-size: 0.88rem;
+  color: var(--ink-soft);
+  font-style: italic;
+  margin: 0.4rem 0 1.6rem;
+}
+
+#rsvp-search { text-align: center; }
+
+/* Each person in the party */
+
+.rsvp-guest {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.4rem 1.5rem;
+  margin-bottom: 1rem;
+  box-shadow: var(--shadow);
+}
+
+.rsvp-guest-name {
+  font-family: var(--font-head);
+  font-size: 1.6rem;
+  color: var(--heading);
+  margin: 0 0 0.9rem;
+}
+
+.rsvp-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+
+.rsvp-choice label {
+  flex: 1 1 190px;
+  position: relative;
+  cursor: pointer;
+}
+
+.rsvp-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.rsvp-choice span {
+  display: block;
+  text-align: center;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.rsvp-choice input:checked + span {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.rsvp-choice input:focus-visible + span {
+  box-shadow: 0 0 0 3px rgba(116, 132, 95, 0.3);
+}
+
+.rsvp-guest-extra {
+  margin-top: 1.2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--line);
+}
+
+.rsvp-guest-extra .rsvp-field:last-child { margin-bottom: 0; }
+
+#rsvp-extras { margin-top: 2rem; }
+
+.rsvp-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  margin-top: 1.6rem;
+}
+
+/* Feedback states */
+
+.rsvp-error {
+  max-width: 34rem;
+  margin: 1.4rem auto 0;
+  text-align: center;
+  color: #8C4A3F;
+  background: #FBEDE9;
+  border: 1px solid #EBD2CA;
+  border-radius: 8px;
+  padding: 0.85rem 1.1rem;
+  font-size: 0.93rem;
+}
+
+#rsvp-done { text-align: center; padding: 1rem 0; }
+
+.rsvp-done-mark {
+  font-size: 2.4rem;
+  color: var(--terra);
+  margin: 0 0 0.3rem;
+}
+
+.rsvp-done-title {
+  font-size: 2rem;
+  font-style: italic;
+  margin-bottom: 0.4rem;
+}
+
+.rsvp-unconfigured {
+  text-align: center;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
 /* ---------- Footer ---------- */
 
 .footer {

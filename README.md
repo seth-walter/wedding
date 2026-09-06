@@ -12,6 +12,9 @@ A static wedding website hosted on GitHub Pages.
   `index.html`.
 - **Colors / fonts**: the `:root` variables at the top of `css/style.css`.
 - **Photos**: see `images/README.md`.
+- **RSVP**: the guest list lives in a private Google Sheet, not in this repo.
+  See `apps-script/SETUP.md` to connect it. Run `node apps-script/test-rsvp.js`
+  after editing `apps-script/Code.gs`.
 
 ## Local preview
 

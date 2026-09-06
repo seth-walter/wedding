@@ -230,8 +230,48 @@
         <p id="rsvp-note">Kindly reply by <strong>February 1, 2027</strong>. Search for
         your name and let us know if you can make it — we truly hope you can!</p>
       </div>
-      <a class="btn btn-primary btn-lg" href="https://rixey-app.vercel.app/w/seth-and-julie"
-         target="_blank" rel="noopener">Find your invitation &amp; RSVP</a>
+
+      <div id="rsvp-app">
+
+        <!-- Step 1: find your invitation -->
+        <div id="rsvp-search">
+          <div class="rsvp-name-fields">
+            <label class="rsvp-field">
+              <span>First name</span>
+              <input type="text" id="rsvp-first" autocomplete="given-name" maxlength="60">
+            </label>
+            <label class="rsvp-field">
+              <span>Last name</span>
+              <input type="text" id="rsvp-last" autocomplete="family-name" maxlength="60">
+            </label>
+          </div>
+          <p class="rsvp-hint">Please enter your name as it appears on your invitation.</p>
+          <button class="btn btn-primary btn-lg" id="rsvp-search-btn" type="button">
+            Find my invitation
+          </button>
+        </div>
+
+        <!-- Step 2: respond for your party -->
+        <div id="rsvp-form" hidden>
+          <div id="rsvp-guests"></div>
+          <div id="rsvp-extras"></div>
+          <div class="rsvp-actions">
+            <button class="btn btn-outline" id="rsvp-back-btn" type="button">Back</button>
+            <button class="btn btn-primary" id="rsvp-submit-btn" type="button">
+              Send our response
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: thank you -->
+        <div id="rsvp-done" hidden>
+          <p class="rsvp-done-mark" aria-hidden="true">♡</p>
+          <h3 class="rsvp-done-title">Thank you!</h3>
+          <p id="rsvp-done-msg"></p>
+        </div>
+
+        <p class="rsvp-error" id="rsvp-error" role="alert" hidden></p>
+      </div>
     </div>
   </section>
 
@@ -254,5 +294,6 @@
   </footer>
 
   <script src="js/main.js"></script>
+  <script src="js/rsvp.js"></script>
 </body>
 </html>
