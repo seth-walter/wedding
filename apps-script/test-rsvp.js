@@ -42,6 +42,11 @@ const guestRows = [
   // A couple left untouched by other tests, for partial-submission checks.
   [12, "Ravi", "Quinn", "Quinn", "2 Fern Rd", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
   [13, "Nadia", "Quinn", "Quinn", "2 Fern Rd", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  // Half-named guests: real people who must not be silently dropped.
+  [14, "Bea", "", "Quinn", "2 Fern Rd", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [15, "", "Okafor", "Okafor", "6 Larch Way", "", "", "", "Bride", "Y", "Y", "", "", "", "", "", "", ""],
+  // A genuinely empty spacer row.
+  ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
 ];
 
 const sheets = {};
@@ -110,13 +115,21 @@ global.Logger = { log: (...a) => console.log("  [log]", ...a) };
 
 // ---- Load Code.gs into this scope ---------------------------------------
 
+// Function declarations leak out of a direct eval, but `const CONFIG` does not,
+// so hand a reference out explicitly. It is the same object the functions close
+// over, so mutating it here changes their behavior.
 const code = fs.readFileSync(SRC, "utf8");
-eval(code);
+eval(code + "\n;globalThis.__CONFIG = CONFIG;");
+const CONFIG = globalThis.__CONFIG;
 
 // ---- Assertions ----------------------------------------------------------
 
-// Searches share one global per-minute budget, so clear it between sections
-// that would otherwise trip the throttle on each other's behalf.
+// Searches share one global per-minute budget. Lift it for the bulk of the
+// suite so unrelated sections do not exhaust it on each other's behalf; the
+// throttle itself is exercised deliberately at the end.
+const REAL_SEARCH_LIMIT = CONFIG.maxSearchesPerMinute;
+CONFIG.maxSearchesPerMinute = 1e6;
+
 function resetRateLimit() {
   Object.keys(cache).forEach((k) => delete cache[k]);
 }
@@ -132,7 +145,27 @@ function check(label, actual, expected) {
 console.log("\n--- header detection & readGuests ---");
 check("finds header on row 2, not row 1", findHeaderRow(guestRows), 1);
 const guests = readGuests();
-check("loads 13 invited + 2 plus ones", guests.length, 15);
+check("loads 15 invited + 2 plus ones", guests.length, 17);
+
+console.log("\n--- half-named guests are kept, not dropped ---");
+const ctx = readGuestContext();
+check("guest with no last name is still loaded",
+  !!guests.find(g => g.displayName === "Bea"), true);
+check("guest with no first name is still loaded",
+  !!guests.find(g => g.displayName === "Okafor"), true);
+check("half-named guest is not searchable",
+  guests.find(g => g.displayName === "Bea").normalized, "");
+check("half-named guest still joins their household",
+  guests.find(g => g.displayName === "Bea").household, "Quinn");
+check("Ravi's party includes half-named Bea",
+  handleSearch({ firstName: "Ravi", lastName: "Quinn" }).household.members
+    .some(m => m.name === "Bea"), true);
+check("diagnostics report both half-named rows",
+  ctx.diagnostics.partialNames.map(p => p.name).sort(), ["Bea", "Okafor"]);
+check("diagnostics report the empty spacer row",
+  ctx.diagnostics.blankRows.length, 1);
+check("diagnostics report the detected header row",
+  ctx.diagnostics.headerRowNumber, 2);
 
 console.log("\n--- household grouping: Household only, else alone ---");
 check("Household groups people onto one reply",
@@ -224,7 +257,6 @@ check("Jo Ng sees only herself, not Bo",
   handleSearch({ firstName: "Jo", lastName: "Ng" }).household.members.length, 1);
 
 console.log("\n--- search: rejections ---");
-resetRateLimit();
 check("first name only", handleSearch({ firstName: "Anna", lastName: "" }).error, "need_full_name");
 check("last name only", handleSearch({ firstName: "", lastName: "Reed" }).error, "need_full_name");
 check("stranger rejected", handleSearch({ firstName: "Jane", lastName: "Doe" }).error, "not_found");
@@ -353,8 +385,27 @@ check("recalls previous answer for David", r.household.members.find(m => m.name 
 
 console.log("\n--- rate limiting ---");
 resetRateLimit();
+CONFIG.maxSearchesPerMinute = REAL_SEARCH_LIMIT;
+check("limit is the configured value", REAL_SEARCH_LIMIT, 20);
 for (let i = 0; i < 25; i++) handleSearch({ firstName: "Anna", lastName: "Reed" });
 check("throttles after limit", handleSearch({ firstName: "Anna", lastName: "Reed" }).error, "rate_limited");
 
 console.log(`\n${pass} passed, ${fail} failed\n`);
+
+// `node apps-script/test-rsvp.js --diagnostics` prints what testGuestList would
+// log in the Apps Script editor, against the fake list rather than a real sheet.
+if (process.argv.includes("--diagnostics")) {
+  console.log("=".repeat(64));
+  console.log("testGuestList output (against the test fixture):");
+  console.log("=".repeat(64));
+  global.Logger = {
+    log: (fmt, ...args) => {
+      let i = 0;
+      console.log(String(fmt).replace(/%s/g, () => String(args[i++])));
+    },
+  };
+  testGuestList();
+  console.log();
+}
+
 process.exit(fail ? 1 : 0);

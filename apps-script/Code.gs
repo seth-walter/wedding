@@ -373,11 +373,21 @@ function readGuestContext() {
   }
 
   const values = sheet.getDataRange().getValues();
-  if (values.length < 2) return { sheet: sheet, cols: {}, guests: [] };
+
+  // Every row the parser did not turn into a guest is recorded here, so
+  // testGuestList can explain a shortfall instead of leaving you counting.
+  const diag = { headerRowNumber: 0, scannedRows: 0, blankRows: [], partialNames: [] };
+
+  if (values.length < 2) {
+    return { sheet: sheet, cols: {}, guests: [], diagnostics: diag };
+  }
 
   const headerIndex = findHeaderRow(values);
   const cols = mapColumns(values[headerIndex]);
   const guests = [];
+
+  diag.headerRowNumber = headerIndex + 1;
+  diag.scannedRows = values.length - headerIndex - 1;
 
   for (let r = headerIndex + 1; r < values.length; r++) {
     const row = values[r];
@@ -394,9 +404,22 @@ function readGuestContext() {
       }
     }
 
-    if (!first || !last) continue;
+    // A row with no name at all is a spacer or an empty row — genuinely nothing
+    // to do with it.
+    if (!first && !last) {
+      diag.blankRows.push(r + 1);
+      continue;
+    }
 
-    const displayName = first + ' ' + last;
+    // A row with only half a name is still a real guest and must be counted and
+    // shown to their household. They just cannot look *themselves* up, since
+    // search deliberately demands a first and last name.
+    const complete = !!(first && last);
+    const displayName = complete ? first + ' ' + last : (first || last);
+
+    if (!complete) {
+      diag.partialNames.push({ row: r + 1, name: displayName });
+    }
 
     // Household is the only thing that groups people onto one reply. A guest
     // with no Household value simply RSVPs under their own name.
@@ -407,7 +430,8 @@ function readGuestContext() {
       id: 'g' + (r + 1),
       rowNumber: r + 1,          // 1-indexed sheet row, for writing results back
       displayName: displayName,
-      normalized: normalize(first) + ' ' + normalize(last),
+      normalized: complete ? normalize(first) + ' ' + normalize(last) : '',
+      partialName: !complete,
       household: household,
     });
 
@@ -445,7 +469,13 @@ function readGuestContext() {
     }
   }
 
-  return { sheet: sheet, cols: cols, guests: guests, headerIndex: headerIndex };
+  return {
+    sheet: sheet,
+    cols: cols,
+    guests: guests,
+    headerIndex: headerIndex,
+    diagnostics: diag,
+  };
 }
 
 /**
@@ -470,6 +500,17 @@ function findHeaderRow(values) {
   }
 
   return best;
+}
+
+/** 1 -> "A", 27 -> "AA". Column numbers alone are hard to find in a wide sheet. */
+function columnLetter(n) {
+  let s = '';
+  while (n > 0) {
+    const rem = (n - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    n = Math.floor((n - 1) / 26);
+  }
+  return s;
 }
 
 function isYes(v) {
@@ -597,10 +638,66 @@ function editDistance(a, b) {
  * ------------------------------------------------------------------ */
 
 function testGuestList() {
-  const guests = readGuests();
+  const ctx = readGuestContext();
+  const guests = ctx.guests;
+  const d = ctx.diagnostics;
+
+  // Where the parser thinks everything is. A wrong header row is the single
+  // most common reason for a short guest count, so lead with it.
+  Logger.log('=== How the sheet was read ===');
+  Logger.log('Tab: "%s"', CONFIG.guestSheetName);
+  Logger.log('Header row detected: row %s', d.headerRowNumber);
+  Logger.log('Rows below the header: %s', d.scannedRows);
+
+  const found = [];
+  const missing = [];
+  ['firstName', 'lastName', 'fullName', 'household', 'rsvp', 'meal', 'dietary',
+   'plusOneName', 'plusOneAllowed', 'email'].forEach(function (key) {
+    if (ctx.cols[key] >= 0) {
+      found.push(key + ' = column ' + columnLetter(ctx.cols[key] + 1));
+    } else {
+      missing.push(key);
+    }
+  });
+
+  Logger.log('Columns found:   %s', found.join(', ') || '(none)');
+  Logger.log('Columns missing: %s', missing.join(', ') || '(none)');
+
+  if (ctx.cols.firstName < 0 && ctx.cols.fullName < 0) {
+    Logger.log('');
+    Logger.log('PROBLEM: no name column was recognized on row %s.', d.headerRowNumber);
+    Logger.log('Either the header row is wrong (set headerRow explicitly in CONFIG)');
+    Logger.log('or your header text is not in COLUMN_ALIASES — add it there.');
+  }
+
+  Logger.log('');
+  Logger.log('=== What was loaded ===');
+
+  // The arithmetic that explains any shortfall, line by line.
+  Logger.log('%s rows scanned', d.scannedRows);
+  Logger.log('  minus %s with no name at all (blank or spacer rows)', d.blankRows.length);
+  Logger.log('  = %s guests loaded', guests.length - guests.filter(function (g) { return g.isPlusOne; }).length);
+  Logger.log('  plus %s plus ones', guests.filter(function (g) { return g.isPlusOne; }).length);
+
+  if (d.blankRows.length) {
+    Logger.log('Skipped rows: %s%s',
+      d.blankRows.slice(0, 15).join(', '),
+      d.blankRows.length > 15 ? ' … and ' + (d.blankRows.length - 15) + ' more' : '');
+  }
+
+  if (d.partialNames.length) {
+    Logger.log('');
+    Logger.log('%s guests have only half a name. They are counted and their household',
+      d.partialNames.length);
+    Logger.log('can reply for them, but they cannot look themselves up. Add the missing name:');
+    d.partialNames.forEach(function (p) {
+      Logger.log('   - row %s: "%s"', p.row, p.name);
+    });
+  }
 
   if (guests.length === 0) {
-    Logger.log('No guests found — check the tab name and that you have First/Last Name columns.');
+    Logger.log('');
+    Logger.log('No guests loaded. Check the tab name and the header row above.');
     return;
   }
 
@@ -610,11 +707,10 @@ function testGuestList() {
     households[g.household].push(g);
   });
 
-  const plusOnes = guests.filter(function (g) { return g.isPlusOne; });
-
-  Logger.log('%s people across %s households (%s invited guests + %s plus ones).',
-    guests.length, Object.keys(households).length,
-    guests.length - plusOnes.length, plusOnes.length);
+  Logger.log('');
+  Logger.log('=== Households ===');
+  Logger.log('%s people across %s households.',
+    guests.length, Object.keys(households).length);
 
   // Anyone whose household fell through to the row-number fallback has no
   // Household value, so they will RSVP alone. Usually that is right for a
