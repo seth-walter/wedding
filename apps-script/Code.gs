@@ -106,7 +106,7 @@ function doPost(e) {
  * so you can confirm which version is actually deployed — a deployment left on
  * an old version is otherwise invisible and behaves in confusing ways.
  */
-const VERSION = '2026-09-06.4';
+const VERSION = '2026-09-06.5';
 
 function doGet() {
   // Browsers hitting the URL directly get a harmless response, not the config.
@@ -238,6 +238,7 @@ function handleSubmit(body) {
   const rows = [];
   const accepted = [];
   const now = new Date();
+  let mirrored = true;
 
   for (let i = 0; i < responses.length; i++) {
     const r = responses[i];
@@ -278,15 +279,27 @@ function handleSubmit(body) {
     ]);
     sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
 
+    // The reply is now safely recorded. Mirroring it into the Guests tab is a
+    // convenience, and it can fail for reasons that have nothing to do with the
+    // guest: a dropdown set to reject input, a protected range, a column that
+    // moved. Losing someone's RSVP over that would be far worse than a stale
+    // cell, so this must never take the submission down with it.
     if (CONFIG.writeBack) {
-      writeBackToGuestSheet(ctx, accepted);
+      try {
+        mirrored = writeBackToGuestSheet(ctx, accepted);
+      } catch (err) {
+        mirrored = false;
+        console.error('RSVP saved, but writing it into the Guests tab failed: ' + err);
+      }
     }
   } finally {
     lock.releaseLock();
   }
 
-  const attending = rows.filter(function (r) { return r[3] === 'Yes'; }).length;
-  return { ok: true, attending: attending, total: rows.length };
+  // Count from the responses rather than the written text, which varies with
+  // the RSVP dropdown's wording.
+  const attending = accepted.filter(function (a) { return !!a.response.attending; }).length;
+  return { ok: true, attending: attending, total: rows.length, mirrored: mirrored };
 }
 
 /**
@@ -300,6 +313,11 @@ function handleSubmit(body) {
 function writeBackToGuestSheet(ctx, accepted) {
   const cols = ctx.cols;
   const sheet = ctx.sheet;
+  let ok = true;
+
+  function write(row, column, compute) {
+    if (!trySetCell(sheet, row, column, compute)) ok = false;
+  }
 
   accepted.forEach(function (entry) {
     const guest = entry.guest;
@@ -310,30 +328,56 @@ function writeBackToGuestSheet(ctx, accepted) {
     if (guest.isPlusOne) {
       // The one useful exception: a name the guest supplied, if we had none.
       if (guest.needsName && r.name && cols.plusOneName >= 0) {
-        const cell = sheet.getRange(guest.rowNumber, cols.plusOneName + 1);
-        if (!String(cell.getValue() || '').trim()) {
-          cell.setValue(truncate(String(r.name).trim(), 80));
-        }
+        write(guest.rowNumber, cols.plusOneName + 1, function (cell) {
+          if (String(cell.getValue() || '').trim()) return null;
+          return truncate(String(r.name).trim(), 80);
+        });
       }
       return;
     }
 
+    // Each column is written independently: a rejected dropdown value or a
+    // protected cell should not stop the remaining columns from updating.
     if (cols.rsvp >= 0) {
-      const cell = sheet.getRange(guest.rowNumber, cols.rsvp + 1);
-      cell.setValue(matchDropdown(cell, r.attending ? CONFIG.rsvpYes : CONFIG.rsvpNo));
+      write(guest.rowNumber, cols.rsvp + 1, function (cell) {
+        return matchDropdown(cell, r.attending ? CONFIG.rsvpYes : CONFIG.rsvpNo);
+      });
     }
 
     if (cols.meal >= 0 && r.meal) {
-      sheet.getRange(guest.rowNumber, cols.meal + 1).setValue(truncate(r.meal, 100));
+      write(guest.rowNumber, cols.meal + 1, function (cell) {
+        return matchDropdown(cell, truncate(r.meal, 100));
+      });
     }
 
     if (cols.dietary >= 0 && r.dietary) {
-      const cell = sheet.getRange(guest.rowNumber, cols.dietary + 1);
-      if (!String(cell.getValue() || '').trim()) {
-        cell.setValue(truncate(r.dietary, 500));
-      }
+      write(guest.rowNumber, cols.dietary + 1, function (cell) {
+        // Never overwrite a note written by hand.
+        if (String(cell.getValue() || '').trim()) return null;
+        return truncate(r.dietary, 500);
+      });
     }
   });
+
+  return ok;
+}
+
+/**
+ * Writes one cell, deriving the value from the cell itself. Returning null from
+ * `compute` skips the write. Any failure is logged and swallowed so one
+ * uncooperative column cannot cost a guest their reply.
+ */
+function trySetCell(sheet, row, column, compute) {
+  try {
+    const cell = sheet.getRange(row, column);
+    const value = compute(cell);
+    if (value === null || value === undefined) return true;   // deliberately skipped
+    cell.setValue(value);
+    return true;
+  } catch (err) {
+    console.error('could not write row ' + row + ', column ' + columnLetter(column) + ': ' + err);
+    return false;
+  }
 }
 
 /**
@@ -350,9 +394,20 @@ function matchDropdown(cell, desired) {
   try {
     const rule = cell.getDataValidation();
     if (!rule) return desired;
-    if (String(rule.getCriteriaType()) !== 'VALUE_IN_LIST') return desired;
 
-    const options = rule.getCriteriaValues()[0] || [];
+    const type = String(rule.getCriteriaType());
+    const criteria = rule.getCriteriaValues();
+    let options;
+
+    if (type === 'VALUE_IN_LIST') {
+      options = criteria[0] || [];
+    } else if (type === 'VALUE_IN_RANGE' && criteria[0] && criteria[0].getValues) {
+      // A dropdown built from a range of cells rather than a typed-in list.
+      options = criteria[0].getValues().map(function (r) { return r[0]; });
+    } else {
+      return desired;
+    }
+
     const want = normalize(desired);
 
     for (let i = 0; i < options.length; i++) {

@@ -331,6 +331,36 @@ check("does not overwrite an existing plus one name",
 check("but does record Priya's own RSVP",
   guestRow("Priya Nair")[cIdx("RSVP")], "RSVP'd");
 
+console.log("\n--- a failing write-back must not lose the reply ---");
+// Simulate a strict dropdown or protected range: the RSVP cell throws on write.
+const guestsSheet = sheets["Guests"];
+const realGetRange = guestsSheet.getRange;
+guestsSheet.getRange = function (row, col, numRows, numCols) {
+  const range = realGetRange.call(guestsSheet, row, col, numRows, numCols);
+  if (col === cIdx("RSVP") + 1) {
+    range.setValue = () => { throw new Error("data validation rejects this value"); };
+  }
+  return range;
+};
+
+const rsvpRowsBefore = sheets["RSVPs"].rows.length;
+r = handleSubmit({
+  householdId: "OBrien",
+  responses: [{ id: guests.find(g => g.displayName === "Mary-Kate O'Brien").id, attending: true }],
+});
+check("reply still succeeds when the mirror write throws", r.ok, true);
+check("reply is still recorded on the RSVPs tab",
+  sheets["RSVPs"].rows.length - rsvpRowsBefore, 1);
+check("but reports the mirror did not apply", r.mirrored, false);
+
+guestsSheet.getRange = realGetRange;
+
+r = handleSubmit({
+  householdId: "Anderson",
+  responses: [{ id: guests.find(g => g.displayName === "Christopher Anderson").id, attending: true }],
+});
+check("mirrored is true when the write succeeds", r.mirrored, true);
+
 console.log("\n--- matching the RSVP dropdown ---");
 // The real sheet's dropdown is Pending / RSVP'd / Declined. Point the stub's
 // validation at a CURLY apostrophe, which is what Sheets often stores, and
