@@ -177,6 +177,9 @@ function handleSearch(body) {
     ok: true,
     household: {
       id: householdId,
+      // Which member the searched name belongs to. They must answer for
+      // themselves; answering for the rest of the household is optional.
+      matchedId: matches[0].id,
       members: members.map(function (g) {
         return {
           id: g.id,

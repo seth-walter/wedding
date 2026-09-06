@@ -614,6 +614,89 @@ a { color: var(--accent-dk); }
 
 .rsvp-plusone-name { margin-bottom: 1rem; }
 
+/* The guest who looked themselves up */
+
+.rsvp-guest.is-you { border-color: var(--accent); }
+
+.rsvp-you {
+  display: inline-block;
+  margin-left: 0.6rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-family: var(--font-body);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  vertical-align: middle;
+}
+
+/* A household member who already replied */
+
+.rsvp-replied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  background: var(--bg-alt);
+  border-radius: 8px;
+  padding: 0.7rem 1rem;
+}
+
+.rsvp-replied p {
+  margin: 0;
+  font-size: 0.93rem;
+  color: var(--ink-soft);
+}
+
+.rsvp-change {
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: var(--font-body);
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-dk);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.rsvp-change:hover { color: var(--terra); }
+
+/* "They'll reply themselves" reads as an aside, not a third equal choice */
+
+.rsvp-choice .rsvp-skip { flex-basis: 100%; }
+
+.rsvp-choice .rsvp-skip span {
+  border-style: dashed;
+  font-size: 0.8rem;
+  color: var(--ink-soft);
+}
+
+.rsvp-choice .rsvp-skip input:checked + span {
+  background: transparent;
+  border-color: var(--ink-soft);
+  border-style: solid;
+  color: var(--ink);
+}
+
+.rsvp-party-note {
+  margin: 0 0 1.2rem;
+  text-align: center;
+  font-size: 0.92rem;
+  font-style: italic;
+  color: var(--ink-soft);
+}
+
+.rsvp-done-remaining {
+  margin-top: 0.8rem;
+  font-size: 0.92rem;
+  color: var(--ink-soft);
+}
+
 .rsvp-guest-extra {
   margin-top: 1.2rem;
   padding-top: 1.2rem;

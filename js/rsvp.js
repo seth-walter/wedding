@@ -20,6 +20,7 @@ const el = {
   backBtn: document.getElementById("rsvp-back-btn"),
   done: document.getElementById("rsvp-done"),
   doneMsg: document.getElementById("rsvp-done-msg"),
+  doneRemaining: document.getElementById("rsvp-done-remaining"),
 };
 
 let household = null;
@@ -103,23 +104,43 @@ async function doSearch() {
 function renderForm() {
   el.guests.innerHTML = "";
 
+  const others = household.members.filter((m) => m.id !== household.matchedId);
+  const pending = others.filter((m) => !m.previous);
+
   household.members.forEach((m) => {
+    const isYou = m.id === household.matchedId;
+    // Someone else's existing reply stands unless this guest chooses to change
+    // it, so it starts collapsed behind a summary rather than as live radios.
+    const locked = !isYou && !!m.previous;
+
     const row = document.createElement("div");
-    row.className = "rsvp-guest";
+    row.className = "rsvp-guest" + (isYou ? " is-you" : "");
     row.dataset.guestId = m.id;
+    row.dataset.required = isYou ? "yes" : "no";
 
     const yesChecked = m.previous && m.previous.attending === true ? "checked" : "";
     const noChecked = m.previous && m.previous.attending === false ? "checked" : "";
 
     row.innerHTML = `
-      <p class="rsvp-guest-name">${escapeHtml(m.name)}</p>
+      <p class="rsvp-guest-name">
+        ${escapeHtml(m.name)}${isYou ? '<span class="rsvp-you">you</span>' : ""}
+      </p>
+
+      ${locked
+        ? `<div class="rsvp-replied">
+             <p>Already replied — <strong>${m.previous.attending ? "attending" : "not attending"}</strong>.</p>
+             <button type="button" class="rsvp-change">Change this</button>
+           </div>`
+        : ""}
+
       ${m.needsName
         ? `<label class="rsvp-field rsvp-plusone-name">
              <span>Your guest's name</span>
              <input type="text" class="rsvp-name" maxlength="80" placeholder="Who are you bringing?">
            </label>`
         : ""}
-      <div class="rsvp-choice">
+
+      <div class="rsvp-choice" ${locked ? "hidden" : ""}>
         <label>
           <input type="radio" name="att-${m.id}" value="yes" ${yesChecked}>
           <span>Joyfully accepts</span>
@@ -128,7 +149,14 @@ function renderForm() {
           <input type="radio" name="att-${m.id}" value="no" ${noChecked}>
           <span>Regretfully declines</span>
         </label>
+        ${!isYou && !m.previous
+          ? `<label class="rsvp-skip">
+               <input type="radio" name="att-${m.id}" value="skip" checked>
+               <span>They'll reply themselves</span>
+             </label>`
+          : ""}
       </div>
+
       <div class="rsvp-guest-extra" hidden>
         ${options.meals && options.meals.length ? mealField(m.id, options.meals) : ""}
         ${options.askDietary
@@ -147,10 +175,32 @@ function renderForm() {
       });
     });
 
-    if (yesChecked) row.querySelector(".rsvp-guest-extra").hidden = false;
+    if (yesChecked && !locked) row.querySelector(".rsvp-guest-extra").hidden = false;
+
+    const changeBtn = row.querySelector(".rsvp-change");
+    if (changeBtn) {
+      changeBtn.addEventListener("click", () => {
+        row.querySelector(".rsvp-replied").hidden = true;
+        row.querySelector(".rsvp-choice").hidden = false;
+        row.dataset.changed = "yes";
+      });
+    }
 
     el.guests.appendChild(row);
   });
+
+  // Say plainly that answering for the rest of the party is welcome but not
+  // required, so nobody feels blocked waiting on someone else.
+  el.guests.insertAdjacentHTML(
+    "afterbegin",
+    others.length
+      ? `<p class="rsvp-party-note">${
+          pending.length
+            ? "You can reply for everyone on your invitation, or just yourself — whoever's left can reply later."
+            : "Everyone else on your invitation has already replied. You can change their answer if you need to."
+        }</p>`
+      : ""
+  );
 
   el.extras.innerHTML = `
     <label class="rsvp-field">
@@ -191,8 +241,19 @@ async function doSubmit() {
 
   el.guests.querySelectorAll(".rsvp-guest").forEach((row) => {
     const id = row.dataset.guestId;
+    const required = row.dataset.required === "yes";
     const picked = row.querySelector(`input[name="att-${id}"]:checked`);
-    if (!picked) { missing = true; return; }
+
+    // A reply someone else already gave, left untouched, is not resubmitted.
+    if (row.querySelector(".rsvp-replied") && row.dataset.changed !== "yes") return;
+
+    if (!picked) {
+      if (required) missing = true;
+      return;
+    }
+
+    // "They'll reply themselves" — leave this person for their own visit.
+    if (picked.value === "skip") return;
 
     const mealEl = row.querySelector(".rsvp-meal");
     const dietEl = row.querySelector(".rsvp-dietary");
@@ -213,7 +274,7 @@ async function doSubmit() {
   });
 
   if (missing) {
-    showError("Please choose a response for everyone in your party.");
+    showError("Please let us know whether you can join us.");
     return;
   }
 
@@ -241,9 +302,26 @@ async function doSubmit() {
       return;
     }
 
+    const answered = {};
+    rows.forEach((r) => { answered[r.id] = true; });
+    const stillWaiting = household.members.filter(
+      (m) => !answered[m.id] && !m.previous
+    );
+
     el.doneMsg.textContent = data.attending > 0
       ? "We can't wait to celebrate with you. See you on July 17th!"
       : "Thank you for letting us know — you'll be missed, and we're grateful you told us.";
+
+    // Whoever was left unanswered can still come back and reply themselves.
+    el.doneRemaining.hidden = stillWaiting.length === 0;
+    if (stillWaiting.length) {
+      el.doneRemaining.textContent =
+        (stillWaiting.length === 1
+          ? stillWaiting[0].name + " hasn't replied yet"
+          : "Still to reply: " + stillWaiting.map((m) => m.name).join(", ")) +
+        " — they can come back to this page and look up their own name any time.";
+    }
+
     show("done");
   } catch (err) {
     showError(ERRORS.server_error);

@@ -80,6 +80,14 @@ it only has to match between the people you want grouped.
 Nothing else in the Guests tab is ever written to. Set `writeBack: false` in
 `Code.gs` if you'd rather keep replies only on the `RSVPs` tab.
 
+**Replies are per person, not per household.** When someone looks themselves up
+they see everyone sharing their `Household` value and can answer for the whole
+party in one go — but they don't have to. Anyone they leave alone stays
+`Pending` and can reply themselves later, and a household member who has already
+replied is shown as such rather than being silently overwritten. So filtering
+the `RSVP` column for `Pending` always gives you the real list of who still owes
+you an answer, even within a half-answered household.
+
 **The RSVP dropdown.** Your `RSVP` column has a dropdown of
 `Pending` / `RSVP'd` / `Declined`, and `Code.gs` is set to match: an accepting
 guest gets `RSVP'd`, a declining one gets `Declined`.

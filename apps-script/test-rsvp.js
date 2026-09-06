@@ -39,6 +39,9 @@ const guestRows = [
   [9, "Jo", "Ng", "Ng A", "3 Bay St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
   [10, "Bo", "Ng", "Ng B", "5 Bay St", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
   [11, "Christopher", "Anderson", "Anderson", "8 Cedar Ct", "", "", "", "Groom", "Y", "Y", "", "", "", "", "", "", ""],
+  // A couple left untouched by other tests, for partial-submission checks.
+  [12, "Ravi", "Quinn", "Quinn", "2 Fern Rd", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
+  [13, "Nadia", "Quinn", "Quinn", "2 Fern Rd", "", "", "", "Both", "Y", "Y", "", "", "", "", "", "", ""],
 ];
 
 const sheets = {};
@@ -112,6 +115,12 @@ eval(code);
 
 // ---- Assertions ----------------------------------------------------------
 
+// Searches share one global per-minute budget, so clear it between sections
+// that would otherwise trip the throttle on each other's behalf.
+function resetRateLimit() {
+  Object.keys(cache).forEach((k) => delete cache[k]);
+}
+
 let pass = 0, fail = 0;
 function check(label, actual, expected) {
   const ok = JSON.stringify(actual) === JSON.stringify(expected);
@@ -123,7 +132,7 @@ function check(label, actual, expected) {
 console.log("\n--- header detection & readGuests ---");
 check("finds header on row 2, not row 1", findHeaderRow(guestRows), 1);
 const guests = readGuests();
-check("loads 11 invited + 2 plus ones", guests.length, 13);
+check("loads 13 invited + 2 plus ones", guests.length, 15);
 
 console.log("\n--- household grouping: Household only, else alone ---");
 check("Household groups people onto one reply",
@@ -165,6 +174,34 @@ let r = handleSearch({ action: "search", firstName: "Anna", lastName: "Reed" });
 check("finds Anna", r.ok, true);
 check("returns both household members", r.household.members.length, 2);
 check("member names", r.household.members.map(m => m.name), ["Anna Reed", "David Reed"]);
+check("reports which member matched the search", r.household.matchedId,
+  guests.find(g => g.displayName === "Anna Reed").id);
+check("searching David matches David, not Anna",
+  handleSearch({ firstName: "David", lastName: "Reed" }).household.matchedId,
+  guests.find(g => g.displayName === "David Reed").id);
+
+console.log("\n--- replying for only part of the household ---");
+const ravi = guests.find(g => g.displayName === "Ravi Quinn");
+const nadia = guests.find(g => g.displayName === "Nadia Quinn");
+
+r = handleSubmit({ householdId: "Quinn", responses: [{ id: ravi.id, attending: true }] });
+check("accepts a reply covering one member only", r.ok, true);
+check("counts just the one reply", r.total, 1);
+
+let q = handleSearch({ firstName: "Nadia", lastName: "Quinn" });
+check("Ravi's reply is remembered",
+  q.household.members.find(m => m.name === "Ravi Quinn").previous, { attending: true });
+check("Nadia is still shown as not yet replied",
+  q.household.members.find(m => m.name === "Nadia Quinn").previous, null);
+check("Nadia's own lookup marks her as the match", q.household.matchedId, nadia.id);
+
+// Nadia now replies for herself; Ravi's answer must survive untouched.
+handleSubmit({ householdId: "Quinn", responses: [{ id: nadia.id, attending: false }] });
+q = handleSearch({ firstName: "Ravi", lastName: "Quinn" });
+check("Ravi's answer unchanged after Nadia replies",
+  q.household.members.find(m => m.name === "Ravi Quinn").previous, { attending: true });
+check("Nadia's answer recorded",
+  q.household.members.find(m => m.name === "Nadia Quinn").previous, { attending: false });
 
 console.log("\n--- search: case, spacing, accents, typos ---");
 check("case insensitive", handleSearch({ firstName: "aNNa", lastName: "  reed " }).ok, true);
@@ -187,6 +224,7 @@ check("Jo Ng sees only herself, not Bo",
   handleSearch({ firstName: "Jo", lastName: "Ng" }).household.members.length, 1);
 
 console.log("\n--- search: rejections ---");
+resetRateLimit();
 check("first name only", handleSearch({ firstName: "Anna", lastName: "" }).error, "need_full_name");
 check("last name only", handleSearch({ firstName: "", lastName: "Reed" }).error, "need_full_name");
 check("stranger rejected", handleSearch({ firstName: "Jane", lastName: "Doe" }).error, "not_found");
@@ -194,6 +232,7 @@ check("right first, wrong last", handleSearch({ firstName: "Anna", lastName: "Sm
 check("empty payload", handleSearch({}).error, "need_full_name");
 
 console.log("\n--- submit ---");
+const rsvpRowsBeforeReed = sheets["RSVPs"].rows.length;
 const anna = guests.find(g => g.displayName === "Anna Reed");
 const david = guests.find(g => g.displayName === "David Reed");
 const priya = guests.find(g => g.displayName === "Priya Nair");
@@ -210,7 +249,8 @@ r = handleSubmit({
 check("submit accepted", r.ok, true);
 check("counts attending", r.attending, 1);
 check("counts total", r.total, 2);
-check("wrote 2 rows", sheets["RSVPs"].rows.length, 3); // header + 2
+check("wrote one row per guest answered",
+  sheets["RSVPs"].rows.length - rsvpRowsBeforeReed, 2);
 
 console.log("\n--- submit: plus one names ---");
 r = handleSubmit({
@@ -312,6 +352,7 @@ check("recalls previous answer for Anna", r.household.members.find(m => m.name =
 check("recalls previous answer for David", r.household.members.find(m => m.name === "David Reed").previous, { attending: false });
 
 console.log("\n--- rate limiting ---");
+resetRateLimit();
 for (let i = 0; i < 25; i++) handleSearch({ firstName: "Anna", lastName: "Reed" });
 check("throttles after limit", handleSearch({ firstName: "Anna", lastName: "Reed" }).error, "rate_limited");
 
