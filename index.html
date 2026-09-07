@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Julie &amp; Seth</title>
-  <meta name="description" content="Julie & Seth are getting married — join us to celebrate!">
+  <meta name="description" content="Julie & Seth are getting married. Join us to celebrate!">
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🌿</text></svg>">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,43 +12,47 @@
   <!-- ?v= is bumped on release so browsers cannot serve a stale copy. GitHub
        Pages sends cache-control: max-age=600, which otherwise hides a fix for
        ten minutes and makes changes look like they did not deploy. -->
-  <link rel="stylesheet" href="css/style.css?v=8">
+  <link rel="stylesheet" href="css/style.css?v=9">
 </head>
 <body>
 
   <!-- ============ NAV ============ -->
   <header class="nav" id="top">
     <a class="nav-brand" href="#top">J <span class="amp">&amp;</span> S</a>
-    <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
-      <span></span><span></span><span></span>
-    </button>
     <nav class="nav-links">
-      <a href="#story">Our Story</a>
-      <a href="#day">The Day</a>
-      <a href="#travel">Travel</a>
-      <a href="#registry">Registry</a>
-      <a href="#faq">FAQ</a>
-      <a href="#gallery">Gallery</a>
-      <a class="nav-rsvp" href="#rsvp">RSVP</a>
+      <a href="#story" data-i18n="nav.story">Our Story</a>
+      <a href="#day" data-i18n="nav.day">The Day</a>
+      <a href="#travel" data-i18n="nav.travel">Travel</a>
+      <a href="#registry" data-i18n="nav.registry">Registry</a>
+      <a href="#faq" data-i18n="nav.faq">FAQ</a>
+      <a href="#gallery" data-i18n="nav.gallery">Gallery</a>
+      <a class="nav-rsvp" href="#rsvp" data-i18n="nav.rsvp">RSVP</a>
     </nav>
+    <div class="nav-actions">
+      <button class="nav-lang" id="lang-toggle" type="button"
+              aria-label="Cambiar idioma / Change language">Español</button>
+      <button class="nav-toggle" aria-label="Open menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
   </header>
 
   <!-- ============ HERO ============ -->
   <section class="hero" id="hero">
     <div class="hero-inner">
-      <p class="hero-pre">You are invited to celebrate</p>
+      <p class="hero-pre" data-i18n="hero.pre">You are invited to celebrate</p>
       <h1 class="hero-names">Julie <span class="amp">&amp;</span> Seth</h1>
-      <p class="hero-date" id="hero-date">Saturday, July 17, 2027</p>
+      <p class="hero-date" id="hero-date" data-i18n="hero.date">Saturday, July 17, 2027</p>
       <p class="hero-venue" id="hero-venue">Rixey Manor · Rixeyville, Virginia</p>
 
       <div class="countdown" id="countdown" aria-label="Countdown to the wedding">
-        <div class="count-unit"><span id="cd-days">–</span><small>days</small></div>
-        <div class="count-unit"><span id="cd-hours">–</span><small>hours</small></div>
-        <div class="count-unit"><span id="cd-mins">–</span><small>minutes</small></div>
-        <div class="count-unit"><span id="cd-secs">–</span><small>seconds</small></div>
+        <div class="count-unit"><span id="cd-days">–</span><small data-i18n="cd.days">days</small></div>
+        <div class="count-unit"><span id="cd-hours">–</span><small data-i18n="cd.hours">hours</small></div>
+        <div class="count-unit"><span id="cd-mins">–</span><small data-i18n="cd.mins">minutes</small></div>
+        <div class="count-unit"><span id="cd-secs">–</span><small data-i18n="cd.secs">seconds</small></div>
       </div>
 
-      <a class="btn btn-primary" href="#rsvp">RSVP</a>
+      <a class="btn btn-primary" href="#rsvp" data-i18n="hero.rsvp">RSVP</a>
     </div>
   </section>
 
@@ -57,25 +61,25 @@
   <!-- ============ OUR STORY ============ -->
   <section class="section" id="story">
     <div class="section-inner narrow">
-      <h2>Our Story</h2>
+      <h2 data-i18n="story.title">Our Story</h2>
       <div class="divider" aria-hidden="true"><span>❧</span></div>
       <div class="prose" id="story-text">
-        <p>It started freshman year at James Madison University, on the same floor of
-        the same dorm — a hallway that turned out to hold a lot more than laundry
-        machines and late-night study sessions. We kept finding ourselves in the same
-        classes, too, until it stopped feeling like coincidence and started feeling
-        like the point.</p>
-        <p>Somewhere between shared notes, dining-hall dinners, and walks across the
-        Quad, friendship turned into something more. JMU gave us degrees, but the
-        best thing either of us left with was each other.</p>
+        <p data-i18n="story.p1">It started freshman year at James Madison University,
+        on the same floor of the same dorm. That hallway turned out to hold a lot
+        more than laundry machines and late-night study sessions. We kept finding
+        ourselves in the same classes, too, until it stopped feeling like coincidence
+        and started feeling like the point.</p>
+        <p data-i18n="story.p2">Somewhere between shared notes, dining-hall dinners,
+        and walks across the Quad, friendship turned into something more. JMU gave us
+        degrees, but the best thing either of us left with was each other.</p>
       </div>
 
-      <h3 class="subheading">The Proposal</h3>
+      <h3 class="subheading" data-i18n="proposal.title">The Proposal</h3>
       <div class="prose" id="proposal-text">
-        <p>Years later, on our anniversary trip to Colorado, we hiked the Siamese
-        Twins Loop Trail. At the top, with the mountains stretched out in front of
-        us, Seth got down on one knee. Julie said yes — and the view somehow got
-        even better.</p>
+        <p data-i18n="proposal.p1">Years later, on our anniversary trip to Colorado,
+        we hiked the Siamese Twins Loop Trail. At the top, with the mountains
+        stretched out in front of us, Seth got down on one knee. Julie said yes, and
+        the view somehow got even better.</p>
       </div>
     </div>
   </section>
@@ -83,35 +87,35 @@
   <!-- ============ THE DAY ============ -->
   <section class="section section-alt" id="day">
     <div class="section-inner">
-      <h2>The Day</h2>
+      <h2 data-i18n="day.title">The Day</h2>
       <div class="divider" aria-hidden="true"><span>❧</span></div>
       <div class="cards two">
         <div class="card">
-          <p class="card-kicker">The Celebration</p>
-          <p class="card-time" id="ceremony-time">3:30 in the afternoon</p>
-          <p class="card-detail" id="ceremony-place">Ceremony &amp; reception at Rixey Manor</p>
+          <p class="card-kicker" data-i18n="day.cel.kicker">The Celebration</p>
+          <p class="card-time" id="ceremony-time" data-i18n="day.cel.time">3:30 in the afternoon</p>
+          <p class="card-detail" id="ceremony-place" data-i18n="day.cel.detail">Ceremony &amp; reception at Rixey Manor</p>
         </div>
         <div class="card">
-          <p class="card-kicker">Please Arrive By</p>
+          <p class="card-kicker" data-i18n="day.arr.kicker">Please Arrive By</p>
           <p class="card-time" id="reception-time">3:00</p>
-          <p class="card-detail" id="reception-place">So you're settled before we begin</p>
+          <p class="card-detail" id="reception-place" data-i18n="day.arr.detail">So you're settled before we begin</p>
         </div>
       </div>
 
-      <p class="note" id="unplugged-note">
-        <em>We're having an unplugged ceremony — please tuck phones and cameras away
-        and be fully present with us. Our photographer will capture it all.</em>
+      <p class="note" id="unplugged-note" data-i18n="day.unplugged">
+        <em>We're having an unplugged ceremony. Please tuck phones and cameras away
+        and be fully present with us; our photographer will capture it all.</em>
       </p>
 
       <div class="calendar-buttons">
-        <a class="btn btn-outline" id="gcal-link" href="#" target="_blank" rel="noopener">Add to Google Calendar</a>
-        <button class="btn btn-outline" id="ics-btn" type="button">Apple / Outlook (.ics)</button>
+        <a class="btn btn-outline" id="gcal-link" href="#" target="_blank" rel="noopener" data-i18n="day.gcal">Add to Google Calendar</a>
+        <button class="btn btn-outline" id="ics-btn" type="button" data-i18n="day.ics">Apple / Outlook (.ics)</button>
       </div>
 
-      <h3 class="subheading">Dress Code</h3>
+      <h3 class="subheading" data-i18n="dress.title">Dress Code</h3>
       <div class="prose center">
-        <p id="dress-code"><strong>Semi-Formal</strong> — cocktail dresses, suits, or
-        dress shirts and slacks. Kindly, please no white.</p>
+        <p id="dress-code" data-i18n="dress.text"><strong>Semi-Formal:</strong> cocktail
+        dresses, suits, or dress shirts and slacks. Kindly, please no white.</p>
       </div>
     </div>
   </section>
@@ -119,51 +123,51 @@
   <!-- ============ TRAVEL & LOCAL GUIDE ============ -->
   <section class="section" id="travel">
     <div class="section-inner">
-      <h2>Travel &amp; Local Guide</h2>
+      <h2 data-i18n="travel.title">Travel &amp; Local Guide</h2>
       <div class="divider" aria-hidden="true"><span>❧</span></div>
 
-      <h3 class="subheading">Where to Stay</h3>
+      <h3 class="subheading" data-i18n="stay.title">Where to Stay</h3>
       <div class="cards three" id="stay-cards">
         <div class="card">
-          <p class="card-kicker">Hotel</p>
+          <p class="card-kicker" data-i18n="k.hotel">Hotel</p>
           <h4>Holiday Inn Express Culpeper</h4>
-          <p class="card-detail">In Culpeper · about 15–20 min from Rixey Manor</p>
-          <p class="card-meta">Reliable, close, and easy for groups</p>
+          <p class="card-detail" data-i18n="stay1.detail">In Culpeper, about 15 to 20 minutes from Rixey Manor</p>
+          <p class="card-meta" data-i18n="stay1.meta">Reliable, close, and easy for groups</p>
         </div>
         <div class="card">
-          <p class="card-kicker">Hotel</p>
+          <p class="card-kicker" data-i18n="k.hotel">Hotel</p>
           <h4>Hampton Inn Culpeper</h4>
-          <p class="card-detail">In Culpeper · about 15–20 min from Rixey Manor</p>
-          <p class="card-meta">Free breakfast before a day of exploring</p>
+          <p class="card-detail" data-i18n="stay2.detail">In Culpeper, about 15 to 20 minutes from Rixey Manor</p>
+          <p class="card-meta" data-i18n="stay2.meta">Free breakfast before a day of exploring</p>
         </div>
         <div class="card">
-          <p class="card-kicker">Alternative</p>
+          <p class="card-kicker" data-i18n="k.alt">Alternative</p>
           <h4>B&amp;Bs / Airbnb</h4>
-          <p class="card-detail">Charming countryside stays around Rixeyville &amp; Culpeper</p>
-          <p class="card-meta">Book early — July is busy season</p>
+          <p class="card-detail" data-i18n="stay3.detail">Charming countryside stays around Rixeyville &amp; Culpeper</p>
+          <p class="card-meta" data-i18n="stay3.meta">Book early; July is busy season</p>
         </div>
       </div>
 
-      <h3 class="subheading">Things to Do</h3>
+      <h3 class="subheading" data-i18n="todo.title">Things to Do</h3>
       <div class="cards three" id="todo-cards">
         <div class="card">
-          <p class="card-kicker">Winery</p>
+          <p class="card-kicker" data-i18n="k.winery">Winery</p>
           <h4>Old House Vineyards</h4>
-          <p class="card-detail">Wine, spirits &amp; beer at a restored 19th-century farmhouse — Virginia's first winery-distillery-brewery "trifecta" · ~15 min</p>
+          <p class="card-detail" data-i18n="todo1.detail">Wine, spirits, and beer at a restored 19th-century farmhouse. Virginia's first winery, distillery, and brewery in one · about 15 min</p>
         </div>
         <div class="card">
-          <p class="card-kicker">Small Town</p>
+          <p class="card-kicker" data-i18n="k.town">Small Town</p>
           <h4>Downtown Culpeper</h4>
-          <p class="card-detail">Walkable Davis Street: shops, murals, coffee at Raven's Nest, and great restaurants · ~20 min</p>
+          <p class="card-detail" data-i18n="todo2.detail">Walkable Davis Street: shops, murals, coffee at Raven's Nest, and great restaurants · about 20 min</p>
         </div>
         <div class="card">
-          <p class="card-kicker">Outdoors</p>
+          <p class="card-kicker" data-i18n="k.outdoors">Outdoors</p>
           <h4>Shenandoah National Park</h4>
-          <p class="card-detail">Skyline Drive overlooks and legendary Blue Ridge hikes · ~45 min</p>
+          <p class="card-detail" data-i18n="todo3.detail">Skyline Drive overlooks and legendary Blue Ridge hikes · about 45 min</p>
         </div>
       </div>
 
-      <h3 class="subheading">Getting There</h3>
+      <h3 class="subheading" data-i18n="getting.title">Getting There</h3>
       <div class="map-wrap">
         <iframe id="venue-map" title="Venue map"
           src="https://www.google.com/maps?q=Rixey+Manor%2C+9155+Pleasant+Hill+Dr%2C+Rixeyville%2C+VA+22737&output=embed"
@@ -175,11 +179,11 @@
   <!-- ============ REGISTRY ============ -->
   <section class="section section-alt" id="registry">
     <div class="section-inner narrow">
-      <h2>Registry</h2>
+      <h2 data-i18n="registry.title">Registry</h2>
       <div class="divider" aria-hidden="true"><span>❧</span></div>
       <div class="prose center">
-        <p>Your presence is the greatest gift. Registry details are coming soon —
-        check back here closer to the big day.</p>
+        <p data-i18n="registry.text">Your presence is the greatest gift. Registry
+        details are coming soon; check back here closer to the big day.</p>
       </div>
     </div>
   </section>
@@ -187,27 +191,28 @@
   <!-- ============ FAQ ============ -->
   <section class="section" id="faq">
     <div class="section-inner narrow">
-      <h2>FAQ</h2>
+      <h2 data-i18n="faq.title">FAQ</h2>
       <div class="divider" aria-hidden="true"><span>❧</span></div>
       <div class="faq-list" id="faq-list">
         <details class="faq-item">
-          <summary>Can I bring a plus one?</summary>
-          <p>Plus ones will be indicated on your invitation — please check yours when
-          it arrives.</p>
+          <summary data-i18n="faq.q1">Can I bring a plus one?</summary>
+          <p data-i18n="faq.a1">Plus ones will be indicated on your invitation.
+          Please check yours when it arrives.</p>
         </details>
         <details class="faq-item">
-          <summary>Are children welcome?</summary>
-          <p>We love your little ones, but this will be an adults-only celebration.</p>
+          <summary data-i18n="faq.q2">Are children welcome?</summary>
+          <p data-i18n="faq.a2">We love your little ones, but this will be an
+          adults-only celebration.</p>
         </details>
         <details class="faq-item">
-          <summary>What time should I arrive?</summary>
-          <p>Please plan to arrive by 3:00 PM — thirty minutes before the celebration
-          begins at 3:30.</p>
+          <summary data-i18n="faq.q3">What time should I arrive?</summary>
+          <p data-i18n="faq.a3">Please plan to arrive by 3:00 PM, thirty minutes
+          before the celebration begins at 3:30.</p>
         </details>
         <details class="faq-item">
-          <summary>Is there parking at the venue?</summary>
-          <p>Yes — parking is available on site at Rixey Manor, and signage will guide
-          you when you arrive. See the map above for the entrance.</p>
+          <summary data-i18n="faq.q4">Is there parking at the venue?</summary>
+          <p data-i18n="faq.a4">Yes. Parking is available on site at Rixey Manor, and
+          signage will guide you when you arrive. See the map above for the entrance.</p>
         </details>
       </div>
     </div>
@@ -216,10 +221,10 @@
   <!-- ============ GALLERY ============ -->
   <section class="section section-alt" id="gallery">
     <div class="section-inner">
-      <h2>Gallery</h2>
+      <h2 data-i18n="gallery.title">Gallery</h2>
       <div class="divider" aria-hidden="true"><span>❧</span></div>
       <div class="gallery-grid" id="gallery-grid">
-        <p class="gallery-empty" id="gallery-empty">Photos coming soon ♡</p>
+        <p class="gallery-empty" id="gallery-empty" data-i18n="gallery.empty">Photos coming soon ♡</p>
       </div>
     </div>
   </section>
@@ -227,11 +232,12 @@
   <!-- ============ RSVP ============ -->
   <section class="section" id="rsvp">
     <div class="section-inner narrow center-all">
-      <h2>RSVP</h2>
+      <h2 data-i18n="rsvp.title">RSVP</h2>
       <div class="divider" aria-hidden="true"><span>❧</span></div>
       <div class="prose center">
-        <p id="rsvp-deadline">Kindly reply by <strong>February 1, 2027</strong>. Search for
-        your name and let us know if you can make it — we truly hope you can!</p>
+        <p id="rsvp-deadline" data-i18n="rsvp.deadline">Kindly reply by
+        <strong>February 1, 2027</strong>. Search for your name and let us know if
+        you can make it. We truly hope you can!</p>
       </div>
 
       <div id="rsvp-app">
@@ -240,18 +246,17 @@
         <div id="rsvp-search">
           <div class="rsvp-name-fields">
             <label class="rsvp-field">
-              <span>First name</span>
+              <span data-i18n="rsvp.first">First name</span>
               <input type="text" id="rsvp-first" autocomplete="given-name" maxlength="60">
             </label>
             <label class="rsvp-field">
-              <span>Last name</span>
+              <span data-i18n="rsvp.last">Last name</span>
               <input type="text" id="rsvp-last" autocomplete="family-name" maxlength="60">
             </label>
           </div>
-          <p class="rsvp-hint">Please enter your name as it appears on your invitation.</p>
-          <button class="btn btn-primary btn-lg" id="rsvp-search-btn" type="button">
-            Find my invitation
-          </button>
+          <p class="rsvp-hint" data-i18n="rsvp.hint">Please enter your name as it appears on your invitation.</p>
+          <button class="btn btn-primary btn-lg" id="rsvp-search-btn" type="button"
+                  data-i18n="rsvp.find">Find my invitation</button>
         </div>
 
         <!-- Step 2: respond for your party -->
@@ -259,17 +264,17 @@
           <div id="rsvp-guests"></div>
           <div id="rsvp-extras"></div>
           <div class="rsvp-actions">
-            <button class="btn btn-outline" id="rsvp-back-btn" type="button">Back</button>
-            <button class="btn btn-primary" id="rsvp-submit-btn" type="button">
-              Send our response
-            </button>
+            <button class="btn btn-outline" id="rsvp-back-btn" type="button"
+                    data-i18n="rsvp.back">Back</button>
+            <button class="btn btn-primary" id="rsvp-submit-btn" type="button"
+                    data-i18n="rsvp.send">Send our response</button>
           </div>
         </div>
 
         <!-- Step 3: thank you -->
         <div id="rsvp-done" hidden>
           <p class="rsvp-done-mark" aria-hidden="true">♡</p>
-          <h3 class="rsvp-done-title">Thank you!</h3>
+          <h3 class="rsvp-done-title" data-i18n="rsvp.thanks">Thank you!</h3>
           <p id="rsvp-done-msg"></p>
           <p class="rsvp-done-remaining" id="rsvp-done-remaining" hidden></p>
         </div>
@@ -292,12 +297,15 @@
       </g>
     </svg>
     <p class="footer-names">Julie <span class="amp">&amp;</span> Seth</p>
-    <p class="footer-msg" id="footer-msg">From a dorm hallway at JMU to a mountaintop
-    in Colorado — every step led here. Come dance the next one with us.</p>
+    <p class="footer-msg" id="footer-msg" data-i18n="footer.msg">From a dorm hallway
+    at JMU to a mountaintop in Colorado, every step led here. Come dance the next
+    one with us.</p>
     <p class="footer-date">07 · 17 · 2027</p>
   </footer>
 
-  <script src="js/main.js?v=8"></script>
-  <script src="js/rsvp.js?v=8"></script>
+  <!-- i18n first: main.js and rsvp.js read t() from it. -->
+  <script src="js/i18n.js?v=9"></script>
+  <script src="js/main.js?v=9"></script>
+  <script src="js/rsvp.js?v=9"></script>
 </body>
 </html>

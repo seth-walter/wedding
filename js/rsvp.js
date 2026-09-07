@@ -37,10 +37,10 @@ const DEBUG_TOKEN = "sj-diag-7Q2m";
 
 // Bumped alongside the ?v= in index.html. Printed on load so a stale cached
 // copy is obvious from the console instead of being mistaken for a bug.
-const CLIENT_VERSION = "8";
+const CLIENT_VERSION = "9";
 console.log(
   "[RSVP] client v" + CLIENT_VERSION +
-  (DEBUG ? " — debug mode ON" : " — add ?debug=1 to the URL to see raw errors")
+  (DEBUG ? " (debug mode ON)" : " (add ?debug=1 to the URL to see raw errors)")
 );
 
 // Apps Script rejects a JSON content-type preflight, so send text/plain — the
@@ -72,7 +72,7 @@ function reportFailure(context, err, serverDetail) {
   console.error("[RSVP] " + context, err || serverDetail || "");
   if (!DEBUG) return null;
   const detail = serverDetail || (err && (err.stack || err.message)) || String(err);
-  return context + " — " + String(detail).slice(0, 600);
+  return context + ": " + String(detail).slice(0, 600);
 }
 
 /* ---------- Views ---------- */
@@ -88,16 +88,12 @@ function showError(msg) {
   el.error.hidden = !msg;
 }
 
-const ERRORS = {
-  need_full_name: "Please enter both your first and last name.",
-  not_found:
-    "We couldn't find that name on our guest list. Please try the name exactly as it appears on your invitation — or reach out to us directly and we'll sort it out.",
-  ambiguous:
-    "We found more than one possible match. Please enter your name exactly as it appears on your invitation.",
-  rate_limited: "Things are busy right now. Please wait a moment and try again.",
-  bad_request: "We couldn't read that response. Please reload the page and try again.",
-  server_error: "Something went wrong on our end. Please try again in a minute.",
-};
+// Guest-facing wording lives in js/i18n.js, in both languages.
+function errorMessage(code) {
+  const key = "err." + code;
+  const msg = t(key);
+  return msg === key ? t("err.server_error") : msg;
+}
 
 /* ---------- Search ---------- */
 
@@ -106,13 +102,13 @@ async function doSearch() {
   const lastName = el.last.value.trim();
 
   if (!firstName || !lastName) {
-    showError(ERRORS.need_full_name);
+    showError(t("err.need_full_name"));
     return;
   }
 
   showError("");
   el.searchBtn.disabled = true;
-  el.searchBtn.textContent = "Looking…";
+  el.searchBtn.textContent = t("btn.looking");
 
   try {
     const data = await callApi({ action: "search", firstName, lastName });
@@ -120,7 +116,7 @@ async function doSearch() {
     if (!data.ok) {
       showError(
         reportFailure("search rejected: " + data.error, null, data.detail) ||
-        ERRORS[data.error] || ERRORS.server_error
+        errorMessage(data.error)
       );
       return;
     }
@@ -130,10 +126,10 @@ async function doSearch() {
     renderForm();
     show("form");
   } catch (err) {
-    showError(reportFailure("search failed", err) || ERRORS.server_error);
+    showError(reportFailure("search failed", err) || t("err.server_error"));
   } finally {
     el.searchBtn.disabled = false;
-    el.searchBtn.textContent = "Find my invitation";
+    el.searchBtn.textContent = t("rsvp.find");
   }
 }
 
@@ -167,36 +163,36 @@ function renderForm() {
 
     row.innerHTML = `
       <p class="rsvp-guest-name">
-        ${escapeHtml(m.name)}${isYou ? '<span class="rsvp-you">you</span>' : ""}
+        ${escapeHtml(m.name)}${isYou ? '<span class="rsvp-you">' + t("form.you") + "</span>" : ""}
       </p>
 
       ${locked
         ? `<div class="rsvp-replied">
-             <p>Already replied — <strong>${m.previous.attending ? "attending" : "not attending"}</strong>.</p>
-             <button type="button" class="rsvp-change">Change this</button>
+             <p>${m.previous.attending ? t("form.replied.yes") : t("form.replied.no")}</p>
+             <button type="button" class="rsvp-change">${t("form.change")}</button>
            </div>`
         : ""}
 
       ${m.needsName
         ? `<label class="rsvp-field rsvp-plusone-name">
-             <span>Your guest's name</span>
-             <input type="text" class="rsvp-name" maxlength="80" placeholder="Who are you bringing?">
+             <span>${t("form.guestname")}</span>
+             <input type="text" class="rsvp-name" maxlength="80" placeholder="${t("form.guestname.ph")}">
            </label>`
         : ""}
 
       <div class="rsvp-choice" ${locked ? "hidden" : ""}>
         <label>
           <input type="radio" name="att-${m.id}" value="yes" ${yesChecked}>
-          <span>Joyfully accepts</span>
+          <span>${t("form.accept")}</span>
         </label>
         <label>
           <input type="radio" name="att-${m.id}" value="no" ${noChecked}>
-          <span>Regretfully declines</span>
+          <span>${t("form.decline")}</span>
         </label>
         ${!isYou && !m.previous
           ? `<label class="rsvp-skip">
                <input type="radio" name="att-${m.id}" value="skip" checked>
-               <span>They'll reply themselves</span>
+               <span>${t("form.skip")}</span>
              </label>`
           : ""}
       </div>
@@ -205,7 +201,7 @@ function renderForm() {
         ${options.meals && options.meals.length ? mealField(m.id, options.meals) : ""}
         ${options.askDietary
           ? `<label class="rsvp-field">
-               <span>Dietary restrictions or allergies (optional)</span>
+               <span>${t("form.dietary")}</span>
                <input type="text" class="rsvp-dietary" maxlength="200">
              </label>`
           : ""}
@@ -239,26 +235,24 @@ function renderForm() {
     "afterbegin",
     others.length
       ? `<p class="rsvp-party-note">${
-          pending.length
-            ? "You can reply for everyone on your invitation, or just yourself — whoever's left can reply later."
-            : "Everyone else on your invitation has already replied. You can change their answer if you need to."
+          pending.length ? t("form.party.pending") : t("form.party.replied")
         }</p>`
       : ""
   );
 
   el.extras.innerHTML = `
     <label class="rsvp-field">
-      <span>Email address (optional — so we can send updates)</span>
+      <span>${t("form.email")}</span>
       <input type="email" class="rsvp-in-email" maxlength="200">
     </label>
     ${options.askSongRequest
       ? `<label class="rsvp-field">
-           <span>A song that will get you on the dance floor (optional)</span>
+           <span>${t("form.song")}</span>
            <input type="text" class="rsvp-in-song" maxlength="200">
          </label>`
       : ""}
     <label class="rsvp-field">
-      <span>A note for Julie &amp; Seth (optional)</span>
+      <span>${t("form.note")}</span>
       <textarea class="rsvp-in-note" rows="3" maxlength="800"></textarea>
     </label>
   `;
@@ -268,9 +262,9 @@ function mealField(id, meals) {
   const opts = meals.map((m) => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join("");
   return `
     <label class="rsvp-field">
-      <span>Meal choice</span>
+      <span>${t("form.meal")}</span>
       <select class="rsvp-meal">
-        <option value="">Please choose…</option>
+        <option value="">${t("form.meal.ph")}</option>
         ${opts}
       </select>
     </label>`;
@@ -318,25 +312,25 @@ async function doSubmit() {
   });
 
   if (missing) {
-    showError("Please let us know whether you can join us.");
+    showError(t("err.missing"));
     return;
   }
 
   if (needsGuestName) {
-    showError("Please tell us the name of the guest you're bringing.");
+    showError(t("err.guestname"));
     return;
   }
 
   // Nothing to send: everyone was left for someone else to answer for. Say so
   // rather than posting an empty reply and surfacing a server error.
   if (rows.length === 0) {
-    showError("Please choose a response for at least one person before sending.");
+    showError(t("err.empty"));
     return;
   }
 
   showError("");
   el.submitBtn.disabled = true;
-  el.submitBtn.textContent = "Sending…";
+  el.submitBtn.textContent = t("btn.sending");
 
   try {
     const data = await callApi({
@@ -351,7 +345,7 @@ async function doSubmit() {
     if (!data.ok) {
       showError(
         reportFailure("submit rejected: " + data.error, null, data.detail) ||
-        ERRORS[data.error] || ERRORS.server_error
+        errorMessage(data.error)
       );
       return;
     }
@@ -366,19 +360,15 @@ async function doSubmit() {
         (m) => !answered[m.id] && !m.previous
       );
 
-      el.doneMsg.textContent = data.attending > 0
-        ? "We can't wait to celebrate with you. See you on July 17th!"
-        : "Thank you for letting us know — you'll be missed, and we're grateful you told us.";
+      el.doneMsg.textContent = data.attending > 0 ? t("done.yes") : t("done.no");
 
       // Whoever was left unanswered can still come back and reply themselves.
       if (el.doneRemaining) {
         el.doneRemaining.hidden = stillWaiting.length === 0;
         if (stillWaiting.length) {
-          el.doneRemaining.textContent =
-            (stillWaiting.length === 1
-              ? stillWaiting[0].name + " hasn't replied yet"
-              : "Still to reply: " + stillWaiting.map((m) => m.name).join(", ")) +
-            " — they can come back to this page and look up their own name any time.";
+          el.doneRemaining.textContent = stillWaiting.length === 1
+            ? t("done.wait.one").replace("{name}", stillWaiting[0].name)
+            : t("done.wait.many").replace("{names}", stillWaiting.map((m) => m.name).join(", "));
         }
       }
     } catch (err) {
@@ -387,10 +377,10 @@ async function doSubmit() {
 
     show("done");
   } catch (err) {
-    showError(reportFailure("submit failed", err) || ERRORS.server_error);
+    showError(reportFailure("submit failed", err) || t("err.server_error"));
   } finally {
     el.submitBtn.disabled = false;
-    el.submitBtn.textContent = "Send our response";
+    el.submitBtn.textContent = t("rsvp.send");
   }
 }
 
@@ -422,7 +412,7 @@ function mountDebugPanel() {
   const panel = document.createElement("div");
   panel.className = "rsvp-debug";
   panel.innerHTML = `
-    <p><strong>Debug mode</strong> — client v${CLIENT_VERSION}</p>
+    <p><strong>Debug mode</strong> · client v${CLIENT_VERSION}</p>
     <button type="button" id="rsvp-debug-run">Run connection test</button>
     <pre id="rsvp-debug-out">Not run yet.</pre>
   `;
@@ -442,7 +432,7 @@ function mountDebugPanel() {
       lines.push("GET body: " + text.slice(0, 300));
     } catch (err) {
       lines.push("GET FAILED: " + (err && err.message));
-      lines.push("A failure here means the browser is blocking the request —");
+      lines.push("A failure here means the browser is blocking the request:");
       lines.push("an extension, a content blocker, or a network policy.");
       out.textContent = lines.join("\n");
       return;
@@ -471,10 +461,8 @@ function mountDebugPanel() {
 
 if (el.root) {
   if (!RSVP_ENDPOINT) {
-    // Not configured yet — say so plainly rather than failing silently.
-    el.root.innerHTML =
-      '<p class="rsvp-unconfigured">Our RSVP form is being set up and will be ' +
-      'ready shortly. Please check back soon!</p>';
+    // Not configured yet; say so plainly rather than failing silently.
+    el.root.innerHTML = '<p class="rsvp-unconfigured">' + t("rsvp.unconfigured") + "</p>";
   } else {
     el.searchBtn.addEventListener("click", doSearch);
     el.submitBtn.addEventListener("click", doSubmit);
@@ -486,5 +474,33 @@ if (el.root) {
 
     show("search");
     if (DEBUG) mountDebugPanel();
+
+    // Rebuild the open form in the newly chosen language. Radio selections are
+    // restored from what the guest had picked so far.
+    document.addEventListener("langchange", () => {
+      if (!household || el.form.hidden) return;
+      const picks = {};
+      el.guests.querySelectorAll(".rsvp-guest").forEach((row) => {
+        const id = row.dataset.guestId;
+        const picked = row.querySelector(`input[name="att-${id}"]:checked`);
+        if (picked) picks[id] = picked.value;
+        if (row.dataset.changed === "yes") picks[id + ":changed"] = true;
+      });
+      renderForm();
+      el.guests.querySelectorAll(".rsvp-guest").forEach((row) => {
+        const id = row.dataset.guestId;
+        if (picks[id + ":changed"]) {
+          const btn = row.querySelector(".rsvp-change");
+          if (btn) btn.click();
+        }
+        if (picks[id]) {
+          const input = row.querySelector(`input[name="att-${id}"][value="${picks[id]}"]`);
+          if (input) {
+            input.checked = true;
+            input.dispatchEvent(new Event("change"));
+          }
+        }
+      });
+    });
   }
 }

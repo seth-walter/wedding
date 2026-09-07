@@ -45,7 +45,9 @@ function updateCountdown() {
 
   if (diff <= 0) {
     document.getElementById("countdown").innerHTML =
-      '<p class="hero-date" style="margin:0">Today’s the day! ♡</p>';
+      '<p class="hero-date" style="margin:0">' +
+      (typeof t === "function" ? t("today") : "Today's the day! ♡") +
+      "</p>";
     clearInterval(cdTimer);
     return;
   }
@@ -136,7 +138,7 @@ document.getElementById("ics-btn").addEventListener("click", () => {
     img.onload = () => {
       if (found === 0) empty.remove();
       found++;
-      img.alt = "Julie & Seth — photo " + i;
+      img.alt = "Julie & Seth, photo " + i;
       img.loading = "lazy";
       img.addEventListener("click", () => openLightbox(img.src));
       grid.appendChild(img);

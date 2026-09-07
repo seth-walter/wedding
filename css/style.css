@@ -106,6 +106,28 @@ a { color: var(--accent-dk); }
 
 .nav-links a.nav-rsvp:hover { background: var(--accent-dk); }
 
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.nav-lang {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent-dk);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.nav-lang:hover { border-color: var(--accent); color: var(--accent); }
+
 .nav-toggle {
   display: none;
   background: none;
